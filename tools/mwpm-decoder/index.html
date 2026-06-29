@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MWPM Decoder Visualizer · © Niharika Verma</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--bg2:#0c0f18;--bg3:#11151f;--bg4:#171d2c;--bg5:#1e2538;
+  --b:rgba(255,255,255,.055);--b2:rgba(255,255,255,.11);--b3:rgba(255,255,255,.18);
+  --t:#dde2f2;--t2:#7c85a2;--t3:#3d4560;
+  --blue:#4f8ef7;--amb:#f7c14f;--grn:#3dd68c;--red:#f7614f;
+  --teal:#3dcfc9;--purp:#a47cf7;--pink:#e04fd8;--cyan:#4fcff7;
+}
+body{background:var(--bg);color:var(--t);font-family:'Sora',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+#hdr{height:48px;background:var(--bg2);border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 1.3rem;gap:.65rem;flex-shrink:0}
+#hdr h1{font-size:.9rem;font-weight:500;letter-spacing:-.01em;white-space:nowrap}
+.bge{font-size:.59rem;padding:2px 8px;border-radius:11px;border:1px solid;font-family:'JetBrains Mono',monospace;font-weight:500;white-space:nowrap}
+.bb{border-color:var(--blue);color:var(--blue);background:rgba(79,142,247,.07)}
+.ba{border-color:var(--amb);color:var(--amb);background:rgba(247,193,79,.07)}
+.bg{border-color:var(--grn);color:var(--grn);background:rgba(61,214,140,.07)}
+.br{border-color:var(--red);color:var(--red);background:rgba(247,97,79,.07)}
+.copy{font-size:.62rem;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-left:auto}
+
+/* LAYOUT */
+#body{display:flex;flex:1;overflow:hidden;gap:1px;background:var(--b)}
+.panel{background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+#lp{width:420px;min-width:420px}
+#rp{flex:1}
+
+/* PANEL HEADERS */
+.ph{font-size:.59rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:.5rem .9rem;background:rgba(255,255,255,.012);border-bottom:1px solid var(--b);flex-shrink:0}
+
+/* LEFT PANEL */
+#canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:.8rem;position:relative}
+#sc-canvas{cursor:crosshair}
+
+/* LEFT BOTTOM */
+#lbot{border-top:1px solid var(--b);padding:.65rem .9rem;flex-shrink:0}
+.ir{display:flex;justify-content:space-between;font-size:.7rem;padding:1px 0}
+.ir span:first-child{color:var(--t2);font-family:'JetBrains Mono',monospace}
+.ir span:last-child{font-family:'JetBrains Mono',monospace;font-weight:500}
+.btn-row{display:flex;gap:6px;margin-top:.55rem;flex-wrap:wrap}
+.btn{padding:.35rem .8rem;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--t);font-family:'Sora',sans-serif;font-size:.68rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.06)}
+.btn-blue{border-color:var(--blue)!important;color:var(--blue)!important}
+.btn-blue:hover{background:rgba(79,142,247,.1)!important}
+.btn-red{border-color:var(--red)!important;color:var(--red)!important}
+.btn-red:hover{background:rgba(247,97,79,.1)!important}
+.btn-grn{border-color:var(--grn)!important;color:var(--grn)!important}
+.btn-grn:hover{background:rgba(61,214,140,.1)!important}
+
+/* RIGHT PANEL */
+#rp{display:flex;flex-direction:column}
+#graph-wrap{flex:1;position:relative;overflow:hidden;border-bottom:1px solid var(--b)}
+#graph-canvas{display:block}
+
+/* STEPPER */
+#stepper{flex-shrink:0;height:220px;display:flex;flex-direction:column;overflow:hidden}
+#step-track{display:flex;padding:.6rem .9rem;gap:.4rem;border-bottom:1px solid var(--b);flex-shrink:0;overflow-x:auto}
+.step-pill{
+  font-size:.6rem;padding:.28rem .75rem;border-radius:12px;border:1px solid var(--b2);
+  color:var(--t3);cursor:pointer;white-space:nowrap;transition:all .2s;
+  font-family:'JetBrains Mono',monospace;font-weight:500;flex-shrink:0;
+}
+.step-pill.active{border-color:var(--blue);color:var(--blue);background:rgba(79,142,247,.12)}
+.step-pill.done{border-color:var(--grn);color:var(--grn);background:rgba(61,214,140,.07)}
+.step-pill.error{border-color:var(--red);color:var(--red);background:rgba(247,97,79,.1)}
+
+#step-body{flex:1;display:flex;overflow:hidden}
+#step-text{flex:1;padding:.7rem .9rem;font-size:.75rem;line-height:1.75;color:var(--t2);overflow-y:auto;border-right:1px solid var(--b)}
+#step-text strong{color:var(--t);font-weight:500}
+#step-text .hl-blue{color:var(--blue)}
+#step-text .hl-amb{color:var(--amb)}
+#step-text .hl-grn{color:var(--grn)}
+#step-text .hl-red{color:var(--red)}
+#step-text .hl-purp{color:var(--purp)}
+
+#verdict-box{width:200px;min-width:200px;padding:.7rem .9rem;display:flex;flex-direction:column;justify-content:center;gap:.5rem}
+.vt{font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);font-family:'JetBrains Mono',monospace}
+.vv{font-size:1.05rem;font-weight:600;font-family:'JetBrains Mono',monospace}
+.vm{font-size:.68rem;color:var(--t2);line-height:1.55}
+
+#nav-row{display:flex;gap:6px;padding:.55rem .9rem;border-top:1px solid var(--b);flex-shrink:0}
+.nav-btn{padding:.32rem .9rem;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--t2);font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .15s}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:var(--t)}
+.nav-btn:disabled{opacity:.28;cursor:not-allowed}
+#step-counter{font-size:.68rem;font-family:'JetBrains Mono',monospace;color:var(--t3);display:flex;align-items:center;margin-left:auto}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>MWPM Decoder Visualizer</h1>
+  <span class="bge bb">surface code</span>
+  <span class="bge ba">minimum weight perfect matching</span>
+  <span class="bge bg">step-by-step</span>
+  <span class="bge br">logical error detection</span>
+  <span class="copy">© Niharika Verma</span>
+</div>
+
+<div id="body">
+
+  <!-- LEFT: Surface code patch -->
+  <div class="panel" id="lp">
+    <div class="ph">Surface code patch — click edges to inject X errors</div>
+    <div id="canvas-wrap">
+      <canvas id="sc-canvas"></canvas>
+    </div>
+    <div id="lbot">
+      <div class="ir"><span>Data errors</span><span id="i-de" style="color:var(--red)">0</span></div>
+      <div class="ir"><span>Defects (syndrome flips)</span><span id="i-df" style="color:var(--amb)">0</span></div>
+      <div class="ir"><span>Matching weight</span><span id="i-mw" style="color:var(--blue)">—</span></div>
+      <div class="btn-row">
+        <button class="btn btn-blue" onclick="sc('single')">Single error</button>
+        <button class="btn btn-blue" onclick="sc('chain')">Error chain</button>
+        <button class="btn btn-blue" onclick="sc('boundary')">Boundary path</button>
+        <button class="btn btn-blue" onclick="sc('random')">Random</button>
+        <button class="btn btn-red" onclick="clearAll()">Clear</button>
+      </div>
+      <div style="font-size:.6rem;color:var(--t3);margin-top:.45rem;line-height:1.6">
+        Click any edge between nodes to toggle an X error.<br/>
+        Then press <span style="color:var(--blue)">Next →</span> to step through MWPM.
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Graph + stepper -->
+  <div class="panel" id="rp">
+    <div class="ph">MWPM defect graph — complete graph on syndrome defects with shortest-path weights</div>
+    <div id="graph-wrap">
+      <canvas id="graph-canvas"></canvas>
+    </div>
+
+    <div id="stepper">
+      <div id="step-track">
+        <div class="step-pill active" id="pill-0">0. Inject</div>
+        <div class="step-pill" id="pill-1">1. Syndromes</div>
+        <div class="step-pill" id="pill-2">2. Defect graph</div>
+        <div class="step-pill" id="pill-3">3. All matchings</div>
+        <div class="step-pill" id="pill-4">4. Min matching</div>
+        <div class="step-pill" id="pill-5">5. Correction</div>
+        <div class="step-pill" id="pill-6">6. Verdict</div>
+      </div>
+      <div id="step-body">
+        <div id="step-text">Click an edge on the surface code patch to inject an X error, then press <strong>Next →</strong> to step through the MWPM decoder.</div>
+        <div id="verdict-box">
+          <div class="vt">Verdict</div>
+          <div class="vv" id="vv" style="color:var(--t3)">—</div>
+          <div class="vm" id="vm">Run the decoder to see the outcome.</div>
+        </div>
+      </div>
+      <div id="nav-row">
+        <button class="nav-btn" id="btn-prev" onclick="stepBy(-1)" disabled>← Prev</button>
+        <button class="nav-btn btn-blue" id="btn-next" onclick="stepBy(1)" style="color:var(--blue);border-color:var(--blue)">Next →</button>
+        <button class="nav-btn" onclick="runAll()" style="margin-left:4px">Run all ▶▶</button>
+        <span id="step-counter">step 0 / 6</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =====================================================================
+//  MODEL: 5×5 grid of syndrome nodes, data qubits on edges
+// =====================================================================
+const D = 5;   // syndrome grid D×D
+const PAD = 32, CSPC = 54;  // canvas padding, cell spacing
+const CW = PAD*2 + (D-1)*CSPC;  // canvas size
+
+// edges: {id, type:'h'|'v', xi, yi} — horizontal or vertical edge
+// h edge (xi,yi)-(xi+1,yi): between nodes (xi,yi) and (xi+1,yi)
+// v edge (xi,yi)-(xi,yi+1): between nodes (xi,yi) and (xi,yi+1)
+
+let errors = new Set();    // edge ids with X error
+let syndromes = new Uint8Array(D*D);  // which syndrome qubits fired
+let defects_list = [];     // list of {xi,yi,idx} of firing syndromes
+let all_matchings = [];    // all perfect matchings [{pairs:[],weight}]
+let best_matching = null;  // {pairs:[], weight}
+let correction = new Set();// edge ids in correction chain
+let logical_error = false;
+let curStep = 0;
+let animMatchIdx = 0;
+
+function nid(xi,yi){return yi*D+xi}
+function eid_h(xi,yi){return `h_${xi}_${yi}`}
+function eid_v(xi,yi){return `v_${xi}_${yi}`}
+
+// Canvas setup
+const scc = document.getElementById('sc-canvas');
+const scx = scc.getContext('2d');
+scc.width = CW; scc.height = CW;
+
+const gc = document.getElementById('graph-canvas');
+const gctx = gc.getContext('2d');
+
+function resizeGraph(){
+  const wrap = document.getElementById('graph-wrap');
+  gc.width = wrap.clientWidth;
+  gc.height = wrap.clientHeight;
+  drawGraph();
+}
+window.addEventListener('resize', resizeGraph);
+
+// =====================================================================
+//  NODE POSITION
+// =====================================================================
+function np(xi,yi){return{x:PAD+xi*CSPC, y:PAD+yi*CSPC}}
+
+// =====================================================================
+//  SURFACE CODE DRAW
+// =====================================================================
+function drawSC(){
+  scx.clearRect(0,0,CW,CW);
+  scx.fillStyle='#07090f';
+  scx.fillRect(0,0,CW,CW);
+
+  // Draw logical operator region (top/bottom boundary highlight for X logical)
+  scx.fillStyle='rgba(79,142,247,0.03)';
+  scx.fillRect(0,0,CW,PAD+4);
+  scx.fillRect(0,CW-PAD-4,CW,PAD+4);
+
+  // Boundary labels
+  scx.font='9px JetBrains Mono';
+  scx.fillStyle='rgba(79,142,247,0.4)';
+  scx.fillText('X boundary (logical)',PAD,12);
+  scx.fillStyle='rgba(79,142,247,0.4)';
+  scx.fillText('X boundary (logical)',PAD,CW-4);
+
+  // Draw edges (data qubits)
+  for(let yi=0;yi<D;yi++) for(let xi=0;xi<D-1;xi++){
+    const id=eid_h(xi,yi);
+    const {x:x1,y:y1}=np(xi,yi), {x:x2,y:y2}=np(xi+1,yi);
+    const isErr=errors.has(id);
+    const isCor=correction.has(id);
+    drawEdge(x1,y1,x2,y2,id,isErr,isCor);
+  }
+  for(let yi=0;yi<D-1;yi++) for(let xi=0;xi<D;xi++){
+    const id=eid_v(xi,yi);
+    const {x:x1,y:y1}=np(xi,yi), {x:x2,y:y2}=np(xi,yi+1);
+    const isErr=errors.has(id);
+    const isCor=correction.has(id);
+    drawEdge(x1,y1,x2,y2,id,isErr,isCor);
+  }
+
+  // Draw matching edges on surface code (if step >= 4)
+  if(curStep>=4 && best_matching){
+    for(const[a,b] of best_matching.pairs){
+      // draw shortest path between defects a and b
+      const path = shortestPath(a,b);
+      for(const eid of path){
+        const ep = edgePos(eid);
+        if(ep){
+          scx.beginPath();
+          scx.moveTo(ep.x1,ep.y1); scx.lineTo(ep.x2,ep.y2);
+          scx.strokeStyle='rgba(61,214,140,0.55)';
+          scx.lineWidth=4;
+          scx.setLineDash([4,4]);
+          scx.stroke();
+          scx.setLineDash([]);
+        }
+      }
+    }
+  }
+
+  // Draw syndrome nodes
+  for(let yi=0;yi<D;yi++) for(let xi=0;xi<D;xi++){
+    const {x,y}=np(xi,yi);
+    const idx=nid(xi,yi);
+    const s=syndromes[idx];
+    const isDef=defects_list.some(d=>d.xi===xi&&d.yi===yi);
+
+    if(isDef && curStep>=1){
+      // outer halo
+      scx.beginPath(); scx.arc(x,y,13,0,Math.PI*2);
+      scx.fillStyle='rgba(247,193,79,0.12)'; scx.fill();
+    }
+    scx.beginPath(); scx.arc(x,y,s&&curStep>=1?7:5,0,Math.PI*2);
+    if(isDef&&curStep>=1){scx.fillStyle='#f7c14f';}
+    else if(s&&curStep>=1){scx.fillStyle='#4f8ef7';}
+    else{scx.fillStyle='#101828';}
+    scx.fill();
+    scx.strokeStyle=isDef&&curStep>=1?'#f7c14f':'rgba(79,142,247,0.3)';
+    scx.lineWidth=isDef&&curStep>=1?1.5:0.8;
+    scx.stroke();
+
+    // Defect label
+    if(isDef&&curStep>=1){
+      const di=defects_list.findIndex(d=>d.xi===xi&&d.yi===yi);
+      scx.font='bold 8px JetBrains Mono';
+      scx.fillStyle='#0a0c12';
+      scx.textAlign='center';
+      scx.textBaseline='middle';
+      scx.fillText('D'+di,x,y);
+      scx.textAlign='start';
+      scx.textBaseline='alphabetic';
+    }
+  }
+}
+
+function drawEdge(x1,y1,x2,y2,id,isErr,isCor){
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+
+  // Edge line
+  scx.beginPath(); scx.moveTo(x1,y1); scx.lineTo(x2,y2);
+  if(isCor&&curStep>=5){
+    scx.strokeStyle='rgba(61,214,140,0.75)'; scx.lineWidth=3;
+  } else if(isErr){
+    scx.strokeStyle='rgba(247,97,79,0.75)'; scx.lineWidth=2.5;
+  } else {
+    scx.strokeStyle='rgba(79,142,247,0.18)'; scx.lineWidth=1;
+  }
+  scx.stroke();
+
+  // Error marker
+  if(isErr){
+    scx.save();
+    scx.translate(mx,my);
+    scx.rotate(Math.PI/4);
+    scx.fillStyle='#f7614f';
+    scx.fillRect(-4.5,-4.5,9,9);
+    scx.restore();
+    scx.font='bold 8px JetBrains Mono';
+    scx.fillStyle='#fff';
+    scx.textAlign='center';
+    scx.textBaseline='middle';
+    scx.fillText('X',mx,my);
+    scx.textAlign='start';
+    scx.textBaseline='alphabetic';
+  }
+
+  // Correction marker
+  if(isCor&&curStep>=5&&!isErr){
+    scx.beginPath(); scx.arc(mx,my,4,0,Math.PI*2);
+    scx.fillStyle='#3dd68c'; scx.fill();
+  }
+}
+
+function edgePos(eid){
+  const p=eid.split('_');
+  if(p[0]==='h'){
+    const xi=parseInt(p[1]),yi=parseInt(p[2]);
+    const {x:x1,y:y1}=np(xi,yi),{x:x2,y:y2}=np(xi+1,yi);
+    return{x1,y1,x2,y2};
+  } else {
+    const xi=parseInt(p[1]),yi=parseInt(p[2]);
+    const {x:x1,y:y1}=np(xi,yi),{x:x2,y:y2}=np(xi,yi+1);
+    return{x1,y1,x2,y2};
+  }
+}
+
+// =====================================================================
+//  CLICK TO INJECT
+// =====================================================================
+scc.addEventListener('click',e=>{
+  if(curStep>0) return;
+  const rect=scc.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(CW/rect.width);
+  const my=(e.clientY-rect.top)*(CW/rect.height);
+
+  // Check h edges
+  for(let yi=0;yi<D;yi++) for(let xi=0;xi<D-1;xi++){
+    const {x:x1,y:y1}=np(xi,yi),{x:x2,y:y2}=np(xi+1,yi);
+    if(Math.hypot(mx-(x1+x2)/2,my-(y1+y2)/2)<12){
+      const id=eid_h(xi,yi);
+      if(errors.has(id)) errors.delete(id); else errors.add(id);
+      updateInfo(); drawSC(); return;
+    }
+  }
+  // Check v edges
+  for(let yi=0;yi<D-1;yi++) for(let xi=0;xi<D;xi++){
+    const {x:x1,y:y1}=np(xi,yi),{x:x2,y:y2}=np(xi,yi+1);
+    if(Math.hypot(mx-(x1+x2)/2,my-(y1+y2)/2)<12){
+      const id=eid_v(xi,yi);
+      if(errors.has(id)) errors.delete(id); else errors.add(id);
+      updateInfo(); drawSC(); return;
+    }
+  }
+});
+
+function updateInfo(){
+  document.getElementById('i-de').textContent=errors.size;
+  document.getElementById('i-df').textContent=defects_list.length;
+  const mw=best_matching?best_matching.weight:'—';
+  document.getElementById('i-mw').textContent=mw;
+}
+
+// =====================================================================
+//  PHYSICS
+// =====================================================================
+function computeSyndromes(){
+  syndromes.fill(0);
+  for(const id of errors){
+    const p=id.split('_');
+    if(p[0]==='h'){
+      const xi=parseInt(p[1]),yi=parseInt(p[2]);
+      syndromes[nid(xi,yi)]^=1;
+      syndromes[nid(xi+1,yi)]^=1;
+    } else {
+      const xi=parseInt(p[1]),yi=parseInt(p[2]);
+      syndromes[nid(xi,yi)]^=1;
+      syndromes[nid(xi,yi+1)]^=1;
+    }
+  }
+  defects_list=[];
+  for(let yi=0;yi<D;yi++) for(let xi=0;xi<D;xi++){
+    if(syndromes[nid(xi,yi)]) defects_list.push({xi,yi,idx:nid(xi,yi)});
+  }
+}
+
+// Manhattan distance between two syndrome nodes (shortest path weight)
+function dist(a,b){return Math.abs(a.xi-b.xi)+Math.abs(a.yi-b.yi);}
+
+// Shortest path edges between two nodes (horizontal first, then vertical)
+function shortestPath(a,b){
+  const edges=[];
+  let xi=a.xi,yi=a.yi;
+  while(xi<b.xi){edges.push(eid_h(xi,yi));xi++;}
+  while(xi>b.xi){edges.push(eid_h(xi-1,yi));xi--;}
+  while(yi<b.yi){edges.push(eid_v(xi,yi));yi++;}
+  while(yi>b.yi){edges.push(eid_v(xi,yi-1));yi--;}
+  return edges;
+}
+
+// All perfect matchings (for up to 8 defects, exact)
+function allPerfectMatchings(defs){
+  if(defs.length===0) return [{pairs:[],weight:0}];
+  if(defs.length%2!==0) return []; // add boundary nodes for odd
+  const results=[];
+  function rec(remaining,pairs,w){
+    if(remaining.length===0){results.push({pairs:[...pairs],weight:w});return;}
+    const first=remaining[0];
+    for(let i=1;i<remaining.length;i++){
+      const second=remaining[i];
+      const d=dist(first,second);
+      const rest=remaining.filter((_,idx)=>idx!==0&&idx!==i);
+      pairs.push([first,second]);
+      rec(rest,pairs,w+d);
+      pairs.pop();
+    }
+  }
+  rec(defs,[],0);
+  return results;
+}
+
+// For odd number of defects, add virtual boundary nodes
+function prepareDefects(){
+  let defs=[...defects_list];
+  if(defs.length%2===1){
+    // Add a virtual boundary node — closest boundary for the "odd one out"
+    // We find the defect closest to a boundary and pair it with a virtual node there
+    let best=null,bestD=Infinity;
+    for(const d of defs){
+      const bd=Math.min(d.xi,D-1-d.xi,d.yi,D-1-d.yi);
+      if(bd<bestD){bestD=bd;best=d;}
+    }
+    // virtual boundary node
+    if(best){
+      let vx=best.xi,vy=best.yi;
+      if(best.xi<=best.yi&&best.xi<=D-1-best.xi&&best.xi<=D-1-best.yi) vx=0;
+      else if(D-1-best.xi<=best.yi&&D-1-best.xi<=D-1-best.yi) vx=D-1;
+      else if(best.yi<=D-1-best.yi) vy=0;
+      else vy=D-1;
+      defs.push({xi:vx,yi:vy,idx:-1,virtual:true});
+    }
+  }
+  return defs;
+}
+
+function computeCorrection(){
+  correction=new Set();
+  if(!best_matching) return;
+  for(const[a,b] of best_matching.pairs){
+    if(a.virtual||b.virtual) continue;
+    for(const eid of shortestPath(a,b)) correction.add(eid);
+  }
+}
+
+// Logical error: check if (errors XOR correction) crosses from top to bottom boundary
+// i.e., number of vertical edges in the combined set that form a top-to-bottom path
+function checkLogical(){
+  const combined=new Set([...errors,...correction]);
+  // remove edges in both (XOR)
+  for(const e of errors) if(correction.has(e)){combined.delete(e);}
+  // Check if any column has a full vertical path from row 0 to row D-1
+  for(let xi=0;xi<D;xi++){
+    let connected=true;
+    for(let yi=0;yi<D-1;yi++){
+      if(!combined.has(eid_v(xi,yi))){connected=false;break;}
+    }
+    if(connected){return true;}
+  }
+  // Also check general connectivity top-to-bottom via BFS
+  // Top boundary nodes: yi=0; bottom: yi=D-1
+  const adj={};
+  for(let yi=0;yi<D;yi++) for(let xi=0;xi<D;xi++) adj[nid(xi,yi)]=[];
+  for(const e of combined){
+    const p=e.split('_');
+    if(p[0]==='h'){
+      const xi=parseInt(p[1]),yi=parseInt(p[2]);
+      adj[nid(xi,yi)].push(nid(xi+1,yi));
+      adj[nid(xi+1,yi)].push(nid(xi,yi));
+    } else {
+      const xi=parseInt(p[1]),yi=parseInt(p[2]);
+      adj[nid(xi,yi)].push(nid(xi,yi+1));
+      adj[nid(xi,yi+1)].push(nid(xi,yi));
+    }
+  }
+  // BFS from all top-row nodes
+  const visited=new Set();
+  const queue=[];
+  for(let xi=0;xi<D;xi++){queue.push(nid(xi,0));visited.add(nid(xi,0));}
+  while(queue.length){
+    const n=queue.shift();
+    const yi=Math.floor(n/D);
+    if(yi===D-1) return true;
+    for(const nb of adj[n]) if(!visited.has(nb)){visited.add(nb);queue.push(nb);}
+  }
+  return false;
+}
+
+// =====================================================================
+//  MWPM GRAPH DRAW
+// =====================================================================
+function drawGraph(){
+  if(!gc.width||!gc.height) return;
+  gctx.clearRect(0,0,gc.width,gc.height);
+  gctx.fillStyle='#07090f';
+  gctx.fillRect(0,0,gc.width,gc.height);
+
+  if(curStep<2||defects_list.length===0){
+    gctx.font='12px JetBrains Mono';
+    gctx.fillStyle='rgba(61,69,96,0.7)';
+    gctx.textAlign='center';
+    gctx.fillText(curStep<1?'Syndromes not yet computed':'No defects detected — no matching needed',gc.width/2,gc.height/2);
+    gctx.textAlign='start';
+    return;
+  }
+
+  const defs=defects_list;
+  const n=defs.length;
+  if(n===0) return;
+
+  // Layout defects in a circle
+  const cx=gc.width/2, cy=gc.height/2;
+  const R=Math.min(gc.width,gc.height)*0.32;
+  const pos=defs.map((d,i)=>({
+    x: n===1?cx:cx+R*Math.cos(2*Math.PI*i/n - Math.PI/2),
+    y: n===1?cy:cy+R*Math.sin(2*Math.PI*i/n - Math.PI/2),
+    d
+  }));
+
+  // Draw all edges (complete graph) - step 2+
+  if(curStep>=2){
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+      const isBest=best_matching&&best_matching.pairs.some(([a,b])=>(a===defs[i]&&b===defs[j])||(a===defs[j]&&b===defs[i]));
+      const isHighlighted=curStep>=4&&isBest;
+      gctx.beginPath();
+      gctx.moveTo(pos[i].x,pos[i].y);
+      gctx.lineTo(pos[j].x,pos[j].y);
+      if(isHighlighted){
+        gctx.strokeStyle='rgba(61,214,140,0.75)';
+        gctx.lineWidth=2.5;
+        gctx.setLineDash([]);
+      } else {
+        gctx.strokeStyle=curStep===3?'rgba(164,124,247,0.25)':'rgba(79,142,247,0.15)';
+        gctx.lineWidth=1;
+        gctx.setLineDash(curStep===3?[4,4]:[]);
+      }
+      gctx.stroke();
+      gctx.setLineDash([]);
+
+      // Weight label
+      if(curStep>=2){
+        const d=dist(defs[i],defs[j]);
+        const mx=(pos[i].x+pos[j].x)/2, my=(pos[i].y+pos[j].y)/2;
+        const isMinEdge=isHighlighted;
+        gctx.font=`${isMinEdge?'600':'400'} 10px JetBrains Mono`;
+        gctx.fillStyle=isMinEdge?'#3dd68c':'rgba(84,93,120,0.8)';
+        gctx.textAlign='center';
+        gctx.textBaseline='middle';
+        // bg
+        if(isMinEdge){
+          gctx.fillStyle='rgba(61,214,140,0.12)';
+          gctx.fillRect(mx-10,my-8,20,16);
+          gctx.fillStyle='#3dd68c';
+        }
+        gctx.fillText(d,mx,my);
+        gctx.textAlign='start';
+        gctx.textBaseline='alphabetic';
+      }
+    }
+  }
+
+  // Draw all matchings (step 3) - show them faintly
+  if(curStep===3&&all_matchings.length>0){
+    const colors=['rgba(247,193,79,.18)','rgba(164,124,247,.18)','rgba(61,214,140,.18)'];
+    for(let mi=0;mi<Math.min(all_matchings.length,10);mi++){
+      const m=all_matchings[mi];
+      for(const[a,b] of m.pairs){
+        const ai=defs.indexOf(a), bi=defs.indexOf(b);
+        if(ai<0||bi<0) continue;
+        gctx.beginPath();
+        gctx.moveTo(pos[ai].x,pos[ai].y);
+        gctx.lineTo(pos[bi].x,pos[bi].y);
+        gctx.strokeStyle=colors[mi%colors.length];
+        gctx.lineWidth=1.5;
+        gctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  for(let i=0;i<n;i++){
+    const {x,y,d}=pos[i];
+    gctx.beginPath(); gctx.arc(x,y,16,0,Math.PI*2);
+    gctx.fillStyle='rgba(247,193,79,0.08)'; gctx.fill();
+    gctx.beginPath(); gctx.arc(x,y,13,0,Math.PI*2);
+    gctx.fillStyle='#f7c14f'; gctx.fill();
+    gctx.font='bold 10px JetBrains Mono';
+    gctx.fillStyle='#0a0c12';
+    gctx.textAlign='center'; gctx.textBaseline='middle';
+    gctx.fillText('D'+i,x,y);
+    gctx.textAlign='start'; gctx.textBaseline='alphabetic';
+
+    // Coordinates
+    gctx.font='9px JetBrains Mono';
+    gctx.fillStyle='rgba(123,131,162,0.7)';
+    gctx.textAlign='center';
+    gctx.fillText(`(${d.xi},${d.yi})`,x,y+24);
+    gctx.textAlign='start';
+  }
+
+  // Min weight annotation
+  if(curStep>=4&&best_matching){
+    gctx.font='11px JetBrains Mono';
+    gctx.fillStyle='#3dd68c';
+    gctx.fillText(`min weight = ${best_matching.weight}`,10,20);
+    if(all_matchings.length>1){
+      const sorted=[...all_matchings].sort((a,b)=>a.weight-b.weight);
+      gctx.font='9px JetBrains Mono';
+      gctx.fillStyle='rgba(61,214,140,0.5)';
+      gctx.fillText(`(${all_matchings.length} matchings tried, ${sorted.filter(m=>m.weight===best_matching.weight).length} optimal)`,10,35);
+    }
+  }
+}
+
+// =====================================================================
+//  STEP CONTENT
+// =====================================================================
+const STEPS=[
+  {
+    label:'0. Inject',
+    html:`<strong>Step 0: Inject X errors</strong><br/><br/>
+Click any edge between syndrome nodes on the left to toggle an X (bit-flip) error on that data qubit.<br/><br/>
+Each edge represents a <span class='hl-blue'>data qubit</span>. An X error flips the qubit and will disturb the parity checks of its two neighbouring syndrome qubits.<br/><br/>
+The surface code uses <span class='hl-amb'>Z-type stabilizers</span> at each node. A stabilizer fires (becomes a defect) when an odd number of its adjacent data qubits have errors.<br/><br/>
+Try the scenario buttons to load a preset, or inject manually.`,
+  },
+  {
+    label:'1. Syndromes',
+    html:`<strong>Step 1: Measure syndromes</strong><br/><br/>
+Each syndrome node (stabilizer) checks the parity of its neighbouring data qubits. An X error on a data qubit <span class='hl-red'>anticommutes</span> with the Z stabilizers on either side.<br/><br/>
+<span class='hl-amb'>Amber nodes</span> = defects — syndromes that measured <span class='hl-amb'>-1</span> (an odd number of adjacent errors).<br/>
+<span class='hl-blue'>Blue nodes</span> = active syndromes measuring +1 (even errors, no signal).<br/><br/>
+Key insight: the decoder only sees the defects, <strong>not</strong> the actual errors. Its job is to infer where the errors were from this sparse signal.`,
+  },
+  {
+    label:'2. Defect graph',
+    html:`<strong>Step 2: Build the complete defect graph</strong><br/><br/>
+MWPM builds a <span class='hl-purp'>complete graph</span> G = (V, E) where:<br/>
+• V = set of defects (syndrome qubits that fired)<br/>
+• E = every pair of defects connected by an edge<br/>
+• <span class='hl-blue'>Edge weight</span> = shortest path distance (Manhattan distance) between the two defects<br/><br/>
+The weight represents the minimum number of data qubit errors needed to explain that pair of defects — effectively a <span class='hl-blue'>likelihood score</span>.<br/><br/>
+You can see the complete graph on the right with all pairwise distances labelled.`,
+  },
+  {
+    label:'3. All matchings',
+    html:`<strong>Step 3: Enumerate all perfect matchings</strong><br/><br/>
+A <span class='hl-purp'>perfect matching</span> pairs every defect with exactly one other defect, leaving none unmatched.<br/><br/>
+For N defects, there are <strong>(N-1)!! = (N-1)×(N-3)×…×1</strong> possible perfect matchings.<br/><br/>
+Each matching corresponds to a different hypothesis about which errors caused the observed syndrome pattern. The total weight is the sum of pairwise distances.<br/><br/>
+All matchings are shown faintly on the right. MWPM selects the one with <span class='hl-grn'>minimum total weight</span> — the most likely error pattern.`,
+  },
+  {
+    label:'4. Min matching',
+    html:`<strong>Step 4: Select minimum weight matching</strong><br/><br/>
+The <span class='hl-grn'>minimum weight perfect matching</span> is the pairing of defects that minimises the total edge weight.<br/><br/>
+This is equivalent to finding the most probable error configuration under an independent depolarising noise model — lower weight = fewer errors = higher probability.<br/><br/>
+The green edges on the right show the chosen matching. Each matched pair of defects defines a <span class='hl-grn'>correction path</span> — the shortest sequence of data qubits connecting them that the decoder will apply X corrections to.`,
+  },
+  {
+    label:'5. Correction',
+    html:`<strong>Step 5: Apply correction</strong><br/><br/>
+For each matched pair, the decoder applies X corrections along the <span class='hl-grn'>shortest path</span> between them. This is shown as green dashed lines on the surface code patch.<br/><br/>
+The combined effect of the <span class='hl-red'>original errors</span> and the <span class='hl-grn'>corrections</span> determines the outcome:<br/><br/>
+• If error + correction = <strong>trivial loop</strong> (contractible) → no logical error ✓<br/>
+• If error + correction = <strong>non-trivial loop</strong> (wraps around the code) → <span class='hl-red'>logical error ✗</span><br/><br/>
+This is the fundamental trade-off: MWPM succeeds below threshold, fails above it.`,
+  },
+  {
+    label:'6. Verdict',
+    html:`<strong>Step 6: Logical error check</strong><br/><br/>
+The decoder succeeds if the combined error + correction chain forms only <strong>contractible loops</strong> — closed paths that don't wrap around the code boundary.<br/><br/>
+A <span class='hl-red'>logical error</span> occurs when the combined chain forms a path from one boundary to the opposite boundary — equivalent to applying a logical X operator to the encoded qubit.<br/><br/>
+The MWPM decoder is optimal: below the <span class='hl-blue'>threshold noise rate</span> (~1% for the surface code), it succeeds with high probability. Above it, logical errors become more likely than correction.`,
+  },
+];
+
+function setPills(){
+  for(let i=0;i<7;i++){
+    const p=document.getElementById('pill-'+i);
+    if(i<curStep) p.className='step-pill done';
+    else if(i===curStep) p.className='step-pill active';
+    else p.className='step-pill';
+    if(i===6&&curStep===6){
+      p.className=logical_error?'step-pill error':'step-pill done';
+    }
+  }
+}
+
+function setStepText(){
+  document.getElementById('step-text').innerHTML=STEPS[curStep].html;
+  document.getElementById('step-counter').textContent=`step ${curStep} / 6`;
+  document.getElementById('btn-prev').disabled=curStep===0;
+  document.getElementById('btn-next').disabled=curStep===6;
+  setPills();
+
+  // Verdict
+  if(curStep===6){
+    const vv=document.getElementById('vv');
+    const vm=document.getElementById('vm');
+    if(errors.size===0){
+      vv.textContent='No errors';vv.style.color='var(--t2)';
+      vm.textContent='No errors were injected. The decoder has nothing to do.';
+    } else if(defects_list.length===0){
+      vv.textContent='Undetectable';vv.style.color='var(--purp)';
+      vm.textContent='Errors formed a closed loop — syndrome is trivial. This is a logical error with no syndrome signal.';
+    } else if(logical_error){
+      vv.textContent='✗ Logical error';vv.style.color='var(--red)';
+      vm.textContent='The correction chain and error chain together form a non-trivial loop. The logical qubit has been corrupted.';
+    } else {
+      vv.textContent='✓ Corrected';vv.style.color='var(--grn)';
+      vm.textContent='The MWPM correction successfully returned the logical qubit to its original state. No logical error.';
+    }
+  } else {
+    document.getElementById('vv').textContent='—';
+    document.getElementById('vv').style.color='var(--t3)';
+    document.getElementById('vm').textContent='Run the decoder to see the outcome.';
+  }
+}
+
+// =====================================================================
+//  STEP MACHINE
+// =====================================================================
+function runStep(step){
+  if(step===1){
+    computeSyndromes();
+  } else if(step===2){
+    // defect graph built — just draw
+  } else if(step===3){
+    const defs=prepareDefects();
+    all_matchings=allPerfectMatchings(defs);
+  } else if(step===4){
+    if(all_matchings.length>0){
+      best_matching=all_matchings.reduce((a,b)=>a.weight<b.weight?a:b);
+    }
+  } else if(step===5){
+    computeCorrection();
+  } else if(step===6){
+    logical_error=checkLogical();
+  }
+  updateInfo();
+  drawSC();
+  drawGraph();
+  setStepText();
+}
+
+function stepBy(d){
+  const next=curStep+d;
+  if(next<0||next>6) return;
+  curStep=next;
+  runStep(curStep);
+}
+
+function runAll(){
+  const run=()=>{
+    if(curStep<6){stepBy(1);setTimeout(run,600);}
+  };
+  run();
+}
+
+// =====================================================================
+//  SCENARIOS
+// =====================================================================
+function clearAll(){
+  errors.clear(); syndromes.fill(0); defects_list=[];
+  all_matchings=[]; best_matching=null; correction.clear();
+  logical_error=false; curStep=0;
+  updateInfo(); drawSC(); drawGraph(); setStepText();
+}
+
+function sc(name){
+  clearAll();
+  if(name==='single'){
+    errors.add(eid_h(1,2));
+  } else if(name==='chain'){
+    errors.add(eid_h(0,2));
+    errors.add(eid_h(1,2));
+    errors.add(eid_h(2,2));
+  } else if(name==='boundary'){
+    // Path from left boundary to right — logical operator
+    for(let xi=0;xi<D-1;xi++) errors.add(eid_h(xi,2));
+  } else if(name==='random'){
+    const hE=[];
+    for(let yi=0;yi<D;yi++) for(let xi=0;xi<D-1;xi++) hE.push(eid_h(xi,yi));
+    for(let yi=0;yi<D-1;yi++) for(let xi=0;xi<D;xi++) hE.push(eid_v(xi,yi));
+    const n=2+Math.floor(Math.random()*4);
+    const shuffled=[...hE].sort(()=>Math.random()-.5);
+    for(let i=0;i<n;i++) errors.add(shuffled[i]);
+  }
+  updateInfo(); drawSC(); drawGraph(); setStepText();
+}
+
+// =====================================================================
+//  INIT
+// =====================================================================
+resizeGraph();
+sc('single');
+setStepText();
+</script>
+</body>
+</html>

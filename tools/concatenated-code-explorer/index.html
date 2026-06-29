@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Concatenated Code Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:#0a0c12;--bg2:#0f1219;--bg3:#151923;--bg4:#1c2130;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+    --text:#e8eaf2;--text2:#8b91a8;--text3:#545c78;
+    --accent:#4f8ef7;--accent2:#7c5af7;
+    --green:#3dd68c;--red:#f7614f;--amber:#f7c14f;--teal:#3dcfc9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;min-height:100vh;overflow-x:hidden}
+  header{
+    padding:1.8rem 2.5rem 1.4rem;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:flex-end;gap:2rem;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(79,142,247,0.06) 0%,transparent 100%);
+  }
+  header h1{font-size:1.45rem;font-weight:600;letter-spacing:-0.02em}
+  header p{font-size:0.78rem;color:var(--text2);margin-top:.3rem;font-weight:300}
+  .badge{font-size:.68rem;padding:3px 10px;border-radius:20px;border:1px solid;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.04em}
+  .b-blue{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.08)}
+  .regime{font-size:.72rem;font-weight:500;padding:.38rem 1rem;border-radius:6px;border:1px solid;transition:all .4s;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+
+  .controls{
+    display:flex;align-items:center;gap:2.5rem;padding:.9rem 2rem;
+    border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;
+  }
+  .sg{display:flex;align-items:center;gap:1rem;flex:1;min-width:260px}
+  .sl{font-size:.78rem;color:var(--text2);white-space:nowrap;font-family:'JetBrains Mono',monospace}
+  .sv{font-size:1.1rem;font-weight:600;font-family:'JetBrains Mono',monospace;min-width:52px;text-align:right;transition:color .3s}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;background:var(--bg4);border-radius:2px;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform .15s;box-shadow:0 0 8px rgba(79,142,247,.5)}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+  .thr{display:flex;align-items:center;gap:.5rem;font-size:.76rem;color:var(--text2);font-family:'JetBrains Mono',monospace;padding:.38rem .9rem;border-radius:6px;border:1px solid var(--border2);background:var(--bg3)}
+  .thr-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px rgba(247,193,79,.6)}
+  select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:4px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;cursor:pointer;outline:none}
+
+  .main{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+  .panel{background:var(--bg);padding:1.4rem}
+  .pt{font-size:.68rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem}
+
+  #tree-svg-wrap{overflow:auto;max-height:360px}
+  .chart-wrap{position:relative;height:320px}
+
+  table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin-top:1rem}
+  th{color:var(--text3);font-weight:400;text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em}
+  td{padding:5px 8px;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+
+  .formula-bar{
+    display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;
+    padding:1.1rem 2rem;border-top:1px solid var(--border);background:var(--bg2);
+  }
+  .fb{font-family:'JetBrains Mono',monospace}
+  .fb .ft{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+  .fb .fe{font-size:.88rem;color:var(--text)}
+  .fb .fs{font-size:.72rem;color:var(--text2);margin-top:.18rem}
+
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+  @media(max-width:780px){.main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Concatenated Code Explorer</h1>
+    <p>3-qubit bit-flip repetition code &middot; recursive concatenation &middot; fault-tolerance threshold</p>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+    <span class="badge b-blue">[[3,1,3]] code</span>
+    <span class="badge b-blue">up to level 5</span>
+    <span id="regime" class="regime">—</span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="sg">
+    <span class="sl">p (physical error rate)</span>
+    <input type="range" id="pslider" min="1" max="499" value="100" step="1" oninput="update()"/>
+    <span class="sv" id="pval">0.100</span>
+  </div>
+  <div class="thr"><div class="thr-dot"></div><span>p<sub>th</sub> = 0.500</span></div>
+  <div style="display:flex;gap:.5rem;align-items:center">
+    <span style="font-size:.75rem;color:var(--text2)">Max level:</span>
+    <select id="maxlvl" onchange="reinit()">
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5" selected>5</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel">
+    <div class="pt">Recursive qubit structure</div>
+    <div id="tree-svg-wrap"></div>
+    <table id="tbl"></table>
+  </div>
+  <div class="panel">
+    <div class="pt">Logical error rate vs concatenation level</div>
+    <div class="chart-wrap"><canvas id="echart"></canvas></div>
+    <div style="margin-top:.7rem;display:flex;gap:.8rem;flex-wrap:wrap" id="legend"></div>
+  </div>
+</div>
+
+<div class="formula-bar">
+  <div class="fb">
+    <div class="ft">Recursion</div>
+    <div class="fe">p<sub>L</sub><sup>(k+1)</sup> = 3·(p<sub>L</sub><sup>(k)</sup>)² &minus; 2·(p<sub>L</sub><sup>(k)</sup>)³</div>
+    <div class="fs">majority vote · bit-flip errors only</div>
+  </div>
+  <div class="fb">
+    <div class="ft">Approx. scaling</div>
+    <div class="fe">p<sub>L</sub><sup>(k)</sup> &asymp; p<sub>th</sub> · (p/p<sub>th</sub>)<sup>2<sup>k</sup></sup></div>
+    <div class="fs">exponential suppression below threshold</div>
+  </div>
+  <div class="fb">
+    <div class="ft">Qubit overhead</div>
+    <div class="fe">n(k) = 3<sup>k</sup></div>
+    <div class="fs">level 3 → 27 · level 5 → 243 qubits</div>
+  </div>
+  <div class="fb">
+    <div class="ft">p_L at max level</div>
+    <div class="fe" id="pLval" style="color:var(--accent)">—</div>
+    <div class="fs" id="pLlabel">—</div>
+  </div>
+</div>
+
+<script>
+const P_TH = 0.5;
+const TRACE_PS = [0.05,0.10,0.20,0.30,0.40,0.45,0.49];
+const COLORS   = ['#3dd68c','#3dcfc9','#4f8ef7','#a47cf7','#f7c14f','#f7944f','#f7614f'];
+
+function pL_series(p, maxK) {
+  const arr=[p];
+  for(let k=0;k<maxK;k++){const pk=arr[arr.length-1];arr.push(3*pk*pk-2*pk*pk*pk);}
+  return arr;
+}
+function nQ(k){return Math.pow(3,k)}
+function getP(){return parseInt(document.getElementById('pslider').value)/1000}
+function getML(){return parseInt(document.getElementById('maxlvl').value)}
+
+// --- CHART ---
+let chart=null;
+function initChart(ml){
+  if(chart)chart.destroy();
+  const labels=Array.from({length:ml+1},(_,i)=>`L${i}`);
+  const datasets=TRACE_PS.map((p,i)=>({
+    label:`p=${p.toFixed(2)}`,data:pL_series(p,ml),
+    borderColor:COLORS[i],backgroundColor:COLORS[i]+'18',
+    borderWidth:1.5,pointRadius:3.5,pointHoverRadius:6,tension:.35,fill:false
+  }));
+  chart=new Chart(document.getElementById('echart').getContext('2d'),{
+    type:'line',data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      scales:{
+        y:{type:'logarithmic',min:1e-14,max:1,
+          grid:{color:'rgba(255,255,255,0.05)'},
+          ticks:{color:'#545c78',font:{family:'JetBrains Mono',size:10},
+            callback:v=>{const l=Math.log10(v);return Number.isInteger(l)?`10^${l}`:null}
+          },
+          title:{display:true,text:'p_L (logical error rate)',color:'#545c78',font:{family:'JetBrains Mono',size:11}}
+        },
+        x:{grid:{color:'rgba(255,255,255,0.05)'},
+          ticks:{color:'#545c78',font:{family:'JetBrains Mono',size:11}},
+          title:{display:true,text:'Concatenation level k',color:'#545c78',font:{family:'JetBrains Mono',size:11}}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#1c2130',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
+          titleColor:'#8b91a8',bodyColor:'#e8eaf2',
+          titleFont:{family:'JetBrains Mono',size:10},bodyFont:{family:'JetBrains Mono',size:11},
+          callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y.toExponential(3)}`}
+        }
+      }
+    }
+  });
+  document.getElementById('legend').innerHTML=TRACE_PS.map((p,i)=>
+    `<span style="display:flex;align-items:center;gap:5px;font-size:10px;color:${COLORS[i]};font-family:'JetBrains Mono',monospace">
+      <span style="width:16px;height:2px;background:${COLORS[i]};border-radius:1px;display:inline-block"></span>p=${p.toFixed(2)}</span>`
+  ).join('');
+}
+function updateChartTrace(p,ml){
+  if(!chart)return;
+  chart.data.datasets=chart.data.datasets.filter(d=>!d._cur);
+  chart.data.datasets.push({
+    label:`p=${p.toFixed(3)} ★`,data:pL_series(p,ml),
+    borderColor:'#ffffff',backgroundColor:'rgba(255,255,255,.08)',
+    borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#ffffff',
+    pointHoverRadius:7,tension:.35,fill:false,_cur:true,order:-1
+  });
+  chart.update('none');
+}
+
+// --- TREE ---
+function treeColor(l){const c=['#4f8ef7','#7c5af7','#3dcfc9','#3dd68c','#f7c14f','#f7614f'];return c[Math.min(l,c.length-1)]}
+function buildTree(ml){
+  const dl=Math.min(ml,3);
+  const leaves=Math.pow(3,dl);
+  const W=Math.max(560,leaves*26+60);
+  const H=(dl+1)*72+50;
+  let lines='',nodes='';
+  function draw(level,sl,lc){
+    if(level>dl)return;
+    const x=30+(sl+lc/2)*(W-60)/leaves;
+    const y=40+level*72;
+    const col=treeColor(level);
+    if(level<dl){const cc=lc/3;for(let c=0;c<3;c++){const csl=sl+c*cc;const cx=30+(csl+cc/2)*(W-60)/leaves;const cy=y+72;lines+=`<line x1="${x.toFixed(1)}" y1="${(y+8).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(cy-8).toFixed(1)}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;draw(level+1,csl,cc);}}
+    nodes+=`<g style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y}" r="11" fill="${col}20" stroke="${col}" stroke-width=".5"/><circle cx="${x.toFixed(1)}" cy="${y}" r="7" fill="${col}"/><text x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle" fill="${level===0?'#0a0c12':'#fff'}" font-family="JetBrains Mono" font-size="8" font-weight="600">${level===0?'L':'q'}</text></g>`;
+  }
+  draw(0,0,leaves);
+  let labels='';
+  for(let l=0;l<=dl;l++){const y=40+l*72;const col=treeColor(l);labels+=`<text x="20" y="${(y+4).toFixed(1)}" font-family="JetBrains Mono" font-size="9" fill="${col}" text-anchor="middle">${l===0?'logicl':'lv '+l}</text><rect x="4" y="${(y-9).toFixed(1)}" width="32" height="18" rx="3" fill="${col}18" stroke="${col}" stroke-width=".5"/>`;;}
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block">${lines}${nodes}${labels}</svg>`;
+}
+
+// --- TABLE ---
+function buildTable(p,ml){
+  const pls=pL_series(p,ml);
+  let h=`<thead><tr><th>Level k</th><th>n (qubits)</th><th>p_L</th><th>Verdict</th></tr></thead><tbody>`;
+  for(let k=0;k<=ml;k++){
+    const pLk=pls[k];const n=nQ(k);
+    const col=k===0?'var(--text2)':(pLk<p?'var(--green)':'var(--red)');
+    const verdict=k===0?'—':(pLk<p?`↓ ×${(p/pLk).toFixed(1)} better`:`↑ ×${(pLk/p).toFixed(1)} worse`);
+    h+=`<tr><td style="color:var(--text2)">k=${k}</td><td style="color:var(--teal)">${n}</td><td style="color:${col};font-weight:600">${pLk<1e-10?pLk.toExponential(2):pLk.toFixed(6)}</td><td style="color:${col};font-size:.72rem">${verdict}</td></tr>`;
+  }
+  h+='</tbody>';
+  document.getElementById('tbl').innerHTML=h;
+}
+
+// --- MAIN UPDATE ---
+function update(){
+  const p=getP(),ml=getML();
+  const pds=document.getElementById('pval');pds.textContent=p.toFixed(3);
+  const below=p<P_TH;pds.style.color=below?'var(--green)':'var(--red)';
+  const reg=document.getElementById('regime');
+  if(below){reg.textContent='p < p_th → suppression';reg.style.cssText='border-color:var(--green);color:var(--green);background:rgba(61,214,140,.08)'}
+  else{reg.textContent='p > p_th → amplification';reg.style.cssText='border-color:var(--red);color:var(--red);background:rgba(247,97,79,.08)'}
+  const pls=pL_series(p,ml);const pLf=pls[ml];
+  document.getElementById('pLval').textContent=pLf<1e-12?pLf.toExponential(3):pLf.toFixed(8);
+  document.getElementById('pLlabel').textContent=`at level ${ml} · n=${nQ(ml)} qubits`;
+  updateChartTrace(p,ml);
+  buildTable(p,ml);
+}
+function reinit(){
+  const ml=getML();
+  initChart(ml);
+  document.getElementById('tree-svg-wrap').innerHTML=buildTree(ml);
+  update();
+}
+reinit();
+</script>
+</body>
+</html>

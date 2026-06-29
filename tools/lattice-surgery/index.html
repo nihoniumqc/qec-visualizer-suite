@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Lattice Surgery Visualizer · © Niharika Verma</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--bg2:#0c0f18;--bg3:#11151f;--bg4:#171d2c;--bg5:#1e2538;
+  --b:rgba(255,255,255,.055);--b2:rgba(255,255,255,.11);
+  --t:#dde2f2;--t2:#7c85a2;--t3:#3d4560;
+  --blue:#4f8ef7;--amb:#f7c14f;--grn:#3dd68c;--red:#f7614f;
+  --teal:#3dcfc9;--purp:#a47cf7;--pink:#e04fd8;--mag:#f74fd8;--cyan:#4fcff7;
+}
+body{background:var(--bg);color:var(--t);font-family:'Sora',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+#hdr{height:48px;background:var(--bg2);border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 1.3rem;gap:.6rem;flex-shrink:0}
+#hdr h1{font-size:.9rem;font-weight:500;letter-spacing:-.01em;white-space:nowrap}
+.bge{font-size:.59rem;padding:2px 8px;border-radius:11px;border:1px solid;font-family:'JetBrains Mono',monospace;font-weight:500;white-space:nowrap}
+.bb{border-color:var(--blue);color:var(--blue);background:rgba(79,142,247,.07)}
+.ba{border-color:var(--amb);color:var(--amb);background:rgba(247,193,79,.07)}
+.bg{border-color:var(--grn);color:var(--grn);background:rgba(61,214,140,.07)}
+.bp{border-color:var(--purp);color:var(--purp);background:rgba(164,124,247,.07)}
+.copy{font-size:.62rem;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-left:auto}
+
+/* BODY */
+#body{display:flex;flex:1;overflow:hidden;gap:1px;background:var(--b)}
+.panel{background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+#lp{width:480px;min-width:480px}
+#rp{flex:1;overflow-y:auto}
+.ph{font-size:.59rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);padding:.5rem .9rem;background:rgba(255,255,255,.012);border-bottom:1px solid var(--b);flex-shrink:0}
+
+/* LEFT: controls + canvas */
+#controls-top{padding:.7rem .9rem;border-bottom:1px solid var(--b);display:flex;flex-direction:column;gap:.55rem}
+.ctrl-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.ctrl-label{font-size:.66rem;color:var(--t2);font-family:'JetBrains Mono',monospace;min-width:64px}
+.state-btn{
+  font-size:.68rem;padding:.28rem .65rem;border-radius:5px;border:1px solid var(--b2);
+  background:transparent;color:var(--t2);cursor:pointer;transition:all .15s;font-family:'JetBrains Mono',monospace;
+}
+.state-btn:hover{background:rgba(255,255,255,.06)}
+.state-btn.active-a{border-color:var(--mag);color:var(--mag);background:rgba(247,79,216,.1)}
+.state-btn.active-b{border-color:var(--cyan);color:var(--cyan);background:rgba(79,207,247,.1)}
+.merge-toggle{display:flex;border:1px solid var(--b2);border-radius:6px;overflow:hidden}
+.merge-toggle button{
+  flex:1;padding:.32rem .9rem;border:none;background:transparent;color:var(--t2);
+  font-size:.7rem;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .15s;
+}
+.merge-toggle button.on-z{background:rgba(79,142,247,.16);color:var(--blue)}
+.merge-toggle button.on-x{background:rgba(247,193,79,.16);color:var(--amb)}
+
+#canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:.6rem;position:relative}
+#main-canvas{display:block}
+
+#lbot{border-top:1px solid var(--b);padding:.6rem .9rem;flex-shrink:0}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.btn{padding:.34rem .75rem;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--t);font-family:'Sora',sans-serif;font-size:.68rem;cursor:pointer;transition:all .18s}
+.btn:hover{background:rgba(255,255,255,.06)}
+.btn-blue{border-color:var(--blue)!important;color:var(--blue)!important}
+.btn-blue:hover{background:rgba(79,142,247,.1)!important}
+.btn-red{border-color:var(--red)!important;color:var(--red)!important}
+.btn-red:hover{background:rgba(247,97,79,.1)!important}
+
+/* RIGHT panel */
+#stepper-section{border-bottom:1px solid var(--b)}
+#step-track{display:flex;padding:.6rem .9rem;gap:.4rem;border-bottom:1px solid var(--b);overflow-x:auto}
+.step-pill{font-size:.59rem;padding:.27rem .7rem;border-radius:12px;border:1px solid var(--b2);color:var(--t3);cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'JetBrains Mono',monospace;font-weight:500;flex-shrink:0}
+.step-pill.active{border-color:var(--blue);color:var(--blue);background:rgba(79,142,247,.12)}
+.step-pill.done{border-color:var(--grn);color:var(--grn);background:rgba(61,214,140,.07)}
+
+#step-body{display:flex;padding:.85rem .9rem;gap:1rem}
+#step-text{flex:1;font-size:.78rem;line-height:1.75;color:var(--t2)}
+#step-text strong{color:var(--t);font-weight:500}
+.hl-mag{color:var(--mag)}.hl-cyan{color:var(--cyan)}.hl-amb{color:var(--amb)}.hl-blue{color:var(--blue)}.hl-grn{color:var(--grn)}.hl-red{color:var(--red)}
+
+#outcome-box{width:180px;min-width:180px;padding:.7rem .8rem;background:var(--bg3);border-radius:8px;border:1px solid var(--b);display:flex;flex-direction:column;gap:.4rem;justify-content:center}
+.vt{font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);font-family:'JetBrains Mono',monospace}
+.vv{font-size:1.1rem;font-weight:600;font-family:'JetBrains Mono',monospace}
+.vm{font-size:.65rem;color:var(--t2);line-height:1.5}
+
+#nav-row{display:flex;gap:6px;padding:.55rem .9rem;border-top:1px solid var(--b);align-items:center}
+.nav-btn{padding:.32rem .9rem;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--t2);font-family:'JetBrains Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .15s}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:var(--t)}
+.nav-btn:disabled{opacity:.28;cursor:not-allowed}
+#step-counter{font-size:.68rem;font-family:'JetBrains Mono',monospace;color:var(--t3);margin-left:auto}
+
+/* CNOT explainer */
+#cnot-section{padding:1rem .9rem 1.5rem}
+#cnot-section h3{font-size:.85rem;font-weight:500;margin-bottom:.3rem;color:var(--t)}
+#cnot-section .sub{font-size:.7rem;color:var(--t3);margin-bottom:.9rem;font-family:'JetBrains Mono',monospace}
+.cnot-step{display:flex;gap:.7rem;padding:.55rem 0;border-bottom:1px solid var(--b)}
+.cnot-step:last-child{border-bottom:none}
+.cnot-n{
+  width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.66rem;font-family:'JetBrains Mono',monospace;font-weight:600;flex-shrink:0;margin-top:.1rem;
+}
+.cnot-n.z{background:rgba(79,142,247,.15);color:var(--blue);border:1px solid var(--blue)}
+.cnot-n.x{background:rgba(247,193,79,.15);color:var(--amb);border:1px solid var(--amb)}
+.cnot-n.f{background:rgba(61,214,140,.15);color:var(--grn);border:1px solid var(--grn)}
+.cnot-text{font-size:.74rem;color:var(--t2);line-height:1.65}
+.cnot-text strong{color:var(--t);font-weight:500}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <h1>Lattice Surgery — Logical Gate Visualizer</h1>
+  <span class="bge bb">surface code patches</span>
+  <span class="bge ba">merge &amp; split</span>
+  <span class="bge bg">joint Pauli measurement</span>
+  <span class="bge bp">logical CNOT</span>
+  <span class="copy">© Niharika Verma</span>
+</div>
+
+<div id="body">
+
+  <!-- LEFT -->
+  <div class="panel" id="lp">
+    <div class="ph">Two surface code patches — merge to perform a joint measurement</div>
+
+    <div id="controls-top">
+      <div class="ctrl-row">
+        <span class="ctrl-label" style="color:var(--mag)">Control A:</span>
+        <button class="state-btn" data-p="A" data-s="0" onclick="setState('A','0')">|0⟩</button>
+        <button class="state-btn" data-p="A" data-s="1" onclick="setState('A','1')">|1⟩</button>
+        <button class="state-btn active-a" data-p="A" data-s="+" onclick="setState('A','+')">|+⟩</button>
+        <button class="state-btn" data-p="A" data-s="-" onclick="setState('A','-')">|−⟩</button>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label" style="color:var(--cyan)">Target B:</span>
+        <button class="state-btn active-b" data-p="B" data-s="0" onclick="setState('B','0')">|0⟩</button>
+        <button class="state-btn" data-p="B" data-s="1" onclick="setState('B','1')">|1⟩</button>
+        <button class="state-btn" data-p="B" data-s="+" onclick="setState('B','+')">|+⟩</button>
+        <button class="state-btn" data-p="B" data-s="-" onclick="setState('B','-')">|−⟩</button>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Merge type:</span>
+        <div class="merge-toggle">
+          <button class="on-z" id="mt-z" onclick="setMergeType('Z')">Z-merge (stacked) → measures Z_A⊗Z_B</button>
+          <button id="mt-x" onclick="setMergeType('X')">X-merge (side-by-side) → measures X_A⊗X_B</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="main-canvas"></canvas>
+    </div>
+
+    <div id="lbot">
+      <div class="btn-row">
+        <button class="btn btn-blue" onclick="preset('det0')">Deterministic (Z-merge, |0⟩|0⟩)</button>
+        <button class="btn btn-blue" onclick="preset('random')">Random outcome (Z-merge, |+⟩|0⟩)</button>
+        <button class="btn btn-blue" onclick="preset('xdet')">Deterministic (X-merge, |+⟩|+⟩)</button>
+        <button class="btn btn-red" onclick="resetAll()">Reset to step 0</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel" id="rp">
+    <div id="stepper-section">
+      <div class="ph">Step-by-step merge protocol</div>
+      <div id="step-track">
+        <div class="step-pill active" id="pill-0">0. Setup</div>
+        <div class="step-pill" id="pill-1">1. Init ancilla</div>
+        <div class="step-pill" id="pill-2">2. Activate merge</div>
+        <div class="step-pill" id="pill-3">3. Measure rounds</div>
+        <div class="step-pill" id="pill-4">4. Outcome</div>
+        <div class="step-pill" id="pill-5">5. Split</div>
+      </div>
+      <div id="step-body">
+        <div id="step-text">Pick initial states for the two patches and a merge type, then press <strong>Next →</strong> to begin.</div>
+        <div id="outcome-box">
+          <div class="vt">Joint outcome</div>
+          <div class="vv" id="vv" style="color:var(--t3)">—</div>
+          <div class="vm" id="vm">Run the protocol to see the measured eigenvalue.</div>
+        </div>
+      </div>
+      <div id="nav-row">
+        <button class="nav-btn" id="btn-prev" onclick="stepBy(-1)" disabled>← Prev</button>
+        <button class="nav-btn" id="btn-next" onclick="stepBy(1)" style="color:var(--blue);border-color:var(--blue)">Next →</button>
+        <button class="nav-btn" onclick="runAll()">Run all ▶▶</button>
+        <span id="step-counter">step 0 / 5</span>
+      </div>
+    </div>
+
+    <div id="cnot-section">
+      <h3>How two merges build a full logical CNOT</h3>
+      <div class="sub">Horsman, Fowler, Devitt &amp; Van Meter (2012) — "Surface code quantum computing by lattice surgery"</div>
+
+      <div class="cnot-step">
+        <div class="cnot-n x">1</div>
+        <div class="cnot-text">Initialize an <strong>ancilla patch</strong> A between Control C and Target T, prepared in <span class="hl-amb">|+⟩<sub>L</sub></span>.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n x">2</div>
+        <div class="cnot-text"><strong>X-merge</strong> C with A (join along smooth boundaries) → fault-tolerantly measure <span class="hl-amb">X_C ⊗ X_A = m₁</span>.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n x">3</div>
+        <div class="cnot-text"><strong>Split</strong> C and A back into independent patches.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n z">4</div>
+        <div class="cnot-text"><strong>Z-merge</strong> A with T (join along rough boundaries) → fault-tolerantly measure <span class="hl-blue">Z_A ⊗ Z_T = m₂</span>.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n z">5</div>
+        <div class="cnot-text"><strong>Split</strong> A and T back into independent patches.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n f">6</div>
+        <div class="cnot-text">Measure ancilla A directly in the <strong>X basis</strong> → outcome m₃. Discard A.</div>
+      </div>
+      <div class="cnot-step">
+        <div class="cnot-n f">7</div>
+        <div class="cnot-text">Apply Pauli corrections to C and T conditioned on (m₁, m₂, m₃) — these are classically-controlled, free, and instantaneous. <strong>Net result: CNOT₍C→T₎</strong>, exactly as if the gate had been applied directly — but built entirely from joint Pauli measurements.</div>
+      </div>
+
+      <div style="margin-top:1rem;padding:.7rem .8rem;background:var(--bg3);border-radius:8px;border:1px solid var(--b);font-size:.72rem;color:var(--t2);line-height:1.7">
+        <strong style="color:var(--t)">Why this matters:</strong> this is exactly the mechanism Google and IBM use for logical two-qubit gates on real superconducting surface code chips. There is no native "logical CNOT instruction" — only measurement, merging, and splitting. The interactive demo on the left shows step 2 and step 4 individually: a single merge-measure-split cycle is the atomic operation this entire protocol is built from.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =====================================================================
+//  STATE
+// =====================================================================
+const D = 4;          // qubits per patch side
+const ROUNDS = 3;      // merge measurement rounds
+const S = 38;          // grid spacing
+const PAD = 34;
+
+let stateA = '+', stateB = '0';
+let mergeType = 'Z';   // 'Z' or 'X'
+let curStep = 0;
+let outcome = null;     // +1 or -1
+let outcomeDeterministic = true;
+let animRound = 0;
+
+const EIGEN = {'0':{basis:'Z',val:1},'1':{basis:'Z',val:-1},'+':{basis:'X',val:1},'-':{basis:'X',val:-1}};
+
+function setState(p, s){
+  if(p==='A') stateA=s; else stateB=s;
+  document.querySelectorAll(`.state-btn[data-p="${p}"]`).forEach(b=>{
+    b.classList.toggle(p==='A'?'active-a':'active-b', b.dataset.s===s);
+  });
+  resetAll();
+}
+
+function setMergeType(t){
+  mergeType=t;
+  document.getElementById('mt-z').className=t==='Z'?'on-z':'';
+  document.getElementById('mt-x').className=t==='X'?'on-x':'';
+  resetAll();
+}
+
+function preset(name){
+  if(name==='det0'){ stateA='0'; stateB='0'; mergeType='Z'; }
+  else if(name==='random'){ stateA='+'; stateB='0'; mergeType='Z'; }
+  else if(name==='xdet'){ stateA='+'; stateB='+'; mergeType='X'; }
+  document.querySelectorAll('.state-btn[data-p="A"]').forEach(b=>b.classList.toggle('active-a',b.dataset.s===stateA));
+  document.querySelectorAll('.state-btn[data-p="B"]').forEach(b=>b.classList.toggle('active-b',b.dataset.s===stateB));
+  document.getElementById('mt-z').className=mergeType==='Z'?'on-z':'';
+  document.getElementById('mt-x').className=mergeType==='X'?'on-x':'';
+  resetAll();
+}
+
+// =====================================================================
+//  CANVAS
+// =====================================================================
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+const CW = 460, CH = 460;
+canvas.width = CW; canvas.height = CH;
+
+// Map (mergeIdx 0..2D, crossIdx 0..D-1) -> canvas xy, depending on mergeType
+function canvasPos(mergeIdx, crossIdx){
+  const spanMerge = 2*D*S;
+  const spanCross = (D-1)*S;
+  if(mergeType==='X'){
+    const offX=(CW-spanMerge)/2, offY=(CH-spanCross)/2;
+    return {x: offX+mergeIdx*S, y: offY+crossIdx*S};
+  } else {
+    const offX=(CW-spanCross)/2, offY=(CH-spanMerge)/2;
+    return {x: offX+crossIdx*S, y: offY+mergeIdx*S};
+  }
+}
+
+function qubitExists(mergeIdx){
+  if(mergeIdx<D) return true;           // patch A
+  if(mergeIdx>D) return true;           // patch B
+  // mergeIdx === D : gap
+  return curStep>=1 && curStep<=4;
+}
+
+function stabilizerExists(blockIdx){
+  // blockIdx spans mergeIdx blockIdx..blockIdx+1
+  if(blockIdx < D-1) return true;       // internal to A
+  if(blockIdx > D) return true;         // internal to B
+  // blockIdx in {D-1, D}: spans the gap boundary
+  return curStep>=2 && curStep<=4;
+}
+
+function drawPatches(){
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle='#07090f'; ctx.fillRect(0,0,CW,CH);
+
+  // ---- Stabilizer faces ----
+  for(let b=0;b<2*D;b++){
+    if(!stabilizerExists(b)) continue;
+    for(let c=0;c<D-1;c++){
+      const p1=canvasPos(b,c), p2=canvasPos(b+1,c+1);
+      const cx=(p1.x+p2.x)/2, cy=(p1.y+p2.y)/2;
+      const isX = (b+c)%2===0;
+      const isMergeRegion = (b===D-1||b===D);
+      ctx.save();
+      ctx.translate(cx,cy);
+      if(isX){
+        ctx.rotate(Math.PI/4);
+        ctx.fillStyle = isMergeRegion ? 'rgba(247,193,79,0.28)' : 'rgba(247,193,79,0.10)';
+        ctx.fillRect(-7,-7,14,14);
+        ctx.strokeStyle = isMergeRegion ? 'rgba(247,193,79,0.7)' : 'rgba(247,193,79,0.25)';
+        ctx.lineWidth=1; ctx.strokeRect(-7,-7,14,14);
+      } else {
+        ctx.fillStyle = isMergeRegion ? 'rgba(79,142,247,0.28)' : 'rgba(79,142,247,0.10)';
+        ctx.fillRect(-7,-7,14,14);
+        ctx.strokeStyle = isMergeRegion ? 'rgba(79,142,247,0.7)' : 'rgba(79,142,247,0.25)';
+        ctx.lineWidth=1; ctx.strokeRect(-7,-7,14,14);
+      }
+      ctx.restore();
+    }
+  }
+
+  // ---- Logical operator paths (local to each patch) ----
+  // A local X-operator always varies along "columns"; a local Z-operator always varies along "rows".
+  // Which global axis (mergeIdx vs crossIdx) plays the role of "row" vs "column" flips with mergeType,
+  // so the two operators must swap which draw function they use depending on mergeType.
+  const midCross = Math.floor((D-1)/2);
+
+  if(mergeType==='X'){
+    // mergeIdx = column, crossIdx = row.
+    // X-operator (row fixed, col varies) -> fixed crossIdx, varying mergeIdx -> drawPath. Joins through the gap.
+    drawPath(0, D-1, midCross, '#f74fd8', curStep>=2);
+    drawPath(D+1, 2*D, midCross, '#f74fd8', curStep>=2);
+    if(curStep>=2 && curStep<=4) drawPath(D-1, D+1, midCross, '#f74fd8', true);
+    // Z-operator (col fixed, row varies) -> fixed mergeIdx, varying crossIdx -> drawCrossPath. Stays local/faint.
+    drawCrossPath(midCross, 0, D-1, '#4fcff7', false);
+    drawCrossPath(D+1+midCross, 0, D-1, '#4fcff7', false);
+  } else {
+    // Z-merge: mergeIdx = row, crossIdx = column.
+    // Z-operator (col fixed, row varies) -> fixed crossIdx, varying mergeIdx -> drawPath. Joins through the gap.
+    drawPath(0, D-1, midCross, '#4fcff7', curStep>=2);
+    drawPath(D+1, 2*D, midCross, '#4fcff7', curStep>=2);
+    if(curStep>=2 && curStep<=4) drawPath(D-1, D+1, midCross, '#4fcff7', true);
+    // X-operator (row fixed, col varies) -> fixed mergeIdx, varying crossIdx -> drawCrossPath. Stays local/faint.
+    drawCrossPath(midCross, 0, D-1, '#f74fd8', false);
+    drawCrossPath(D+1+midCross, 0, D-1, '#f74fd8', false);
+  }
+
+  // ---- Qubits ----
+  for(let b=0;b<=2*D;b++){
+    if(!qubitExists(b)) continue;
+    for(let c=0;c<D;c++){
+      const {x,y} = canvasPos(b,c);
+      const isGap = b===D;
+      ctx.beginPath(); ctx.arc(x,y,isGap?5.5:4.5,0,Math.PI*2);
+      if(isGap){
+        const flashRound = (curStep===3);
+        ctx.fillStyle = flashRound ? 'rgba(247,193,79,0.9)' : 'rgba(220,225,242,0.85)';
+      } else {
+        ctx.fillStyle = 'rgba(140,150,180,0.55)';
+      }
+      ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.stroke();
+    }
+  }
+
+  // ---- Patch labels ----
+  ctx.font='11px JetBrains Mono';
+  ctx.fillStyle='rgba(247,79,216,0.85)';
+  if(mergeType==='X'){
+    const pA=canvasPos(Math.floor(D/2)-1, -1); ctx.textAlign='center';
+    ctx.fillText('CONTROL (A)', canvasPos(Math.floor((D-1)/2),0).x, PAD-14);
+    ctx.fillText('TARGET (B)', canvasPos(D+1+Math.floor((D-1)/2),0).x, PAD-14);
+  } else {
+    ctx.textAlign='left';
+    ctx.save();
+    ctx.translate(PAD-26, canvasPos(Math.floor((D-1)/2),0).y);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center';
+    ctx.fillText('CONTROL (A)',0,0);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(PAD-26, canvasPos(D+1+Math.floor((D-1)/2),0).y);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center';
+    ctx.fillText('TARGET (B)',0,0);
+    ctx.restore();
+  }
+  ctx.textAlign='start';
+
+  // ---- State labels ----
+  ctx.font='10px JetBrains Mono';
+  ctx.fillStyle='rgba(247,79,216,0.7)';
+  const aLabelPos = mergeType==='X' ? canvasPos(Math.floor((D-1)/2), D) : canvasPos(D-1, D+0.6);
+  ctx.fillStyle='rgba(247,79,216,0.75)';
+  ctx.textAlign='center';
+  if(mergeType==='X'){
+    ctx.fillText(`A = |${stateA}⟩`, canvasPos(Math.floor((D-1)/2),0).x, CH-14);
+    ctx.fillStyle='rgba(79,207,247,0.75)';
+    ctx.fillText(`B = |${stateB}⟩`, canvasPos(D+1+Math.floor((D-1)/2),0).x, CH-14);
+  } else {
+    ctx.save();
+    ctx.translate(CW-18, canvasPos(Math.floor((D-1)/2),0).y);
+    ctx.rotate(Math.PI/2);
+    ctx.fillText(`A = |${stateA}⟩`,0,0);
+    ctx.restore();
+    ctx.fillStyle='rgba(79,207,247,0.75)';
+    ctx.save();
+    ctx.translate(CW-18, canvasPos(D+1+Math.floor((D-1)/2),0).y);
+    ctx.rotate(Math.PI/2);
+    ctx.fillText(`B = |${stateB}⟩`,0,0);
+    ctx.restore();
+  }
+  ctx.textAlign='start';
+
+  // ---- Merge region label ----
+  if(curStep>=1 && curStep<=4){
+    ctx.font='9px JetBrains Mono';
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.textAlign='center';
+    const gapPos = mergeType==='X' ? canvasPos(D, -0.9) : canvasPos(D, Math.floor((D-1)/2));
+    if(mergeType==='X') ctx.fillText('ancilla gap', canvasPos(D,0).x, PAD-14);
+    ctx.textAlign='start';
+  }
+
+  // ---- Round counter (step 3) ----
+  if(curStep===3){
+    ctx.font='bold 13px JetBrains Mono';
+    ctx.fillStyle='var(--amb)';
+    ctx.fillStyle='rgba(247,193,79,0.9)';
+    ctx.textAlign='center';
+    ctx.fillText(`measurement round ${animRound+1} / ${ROUNDS}`, CW/2, CH-30);
+    ctx.textAlign='start';
+  }
+}
+
+function drawPath(mFrom, mTo, c, color, active){
+  if(!active) {
+    // draw faint local path always
+    ctx.beginPath();
+    for(let m=mFrom;m<=mTo;m++){
+      if(!qubitExists(m)) continue;
+      const {x,y}=canvasPos(m,c);
+      m===mFrom||!qubitExists(m-1)?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=hexA(color,0.28); ctx.lineWidth=2.5; ctx.stroke();
+    return;
+  }
+  ctx.beginPath();
+  let started=false;
+  for(let m=mFrom;m<=mTo;m++){
+    if(!qubitExists(m)) {started=false; continue;}
+    const {x,y}=canvasPos(m,c);
+    if(!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle=hexA(color,0.85); ctx.lineWidth=3.5; ctx.stroke();
+}
+
+function drawCrossPath(m, cFrom, cTo, color, active){
+  if(!qubitExists(m)){return;}
+  ctx.beginPath();
+  for(let c=cFrom;c<=cTo;c++){
+    const {x,y}=canvasPos(m,c);
+    c===cFrom?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = active ? hexA(color,0.85) : hexA(color,0.28);
+  ctx.lineWidth = active ? 3.5 : 2.5;
+  ctx.stroke();
+}
+
+function hexA(hex,a){
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// =====================================================================
+//  STEP CONTENT + LOGIC
+// =====================================================================
+function computeOutcome(){
+  const eA = EIGEN[stateA], eB = EIGEN[stateB];
+  const wantBasis = mergeType; // 'Z' or 'X'
+  const aMatches = eA.basis===wantBasis;
+  const bMatches = eB.basis===wantBasis;
+  if(aMatches && bMatches){
+    outcomeDeterministic = true;
+    outcome = eA.val * eB.val;
+  } else {
+    outcomeDeterministic = false;
+    outcome = Math.random() < 0.5 ? 1 : -1;
+  }
+}
+
+const STEPS = [
+  ()=>`<strong>Step 0: Setup</strong><br/><br/>
+Two independent logical qubits, each encoded in its own surface code patch.<br/><br/>
+<span class="hl-mag">Control A</span> is prepared in <strong>|${stateA}⟩<sub>L</sub></strong>. <span class="hl-cyan">Target B</span> is prepared in <strong>|${stateB}⟩<sub>L</sub></strong>.<br/><br/>
+Each patch has its own logical X (magenta) and logical Z (cyan) operators — strings of physical Pauli operators running between opposite boundaries. Right now the patches share no entanglement at all.`,
+
+  ()=>`<strong>Step 1: Initialize ancilla qubits</strong><br/><br/>
+New physical qubits are initialized in the gap between the two patches — these will temporarily bridge the lattices.<br/><br/>
+${mergeType==='Z'?'For a <span class="hl-blue">Z-type merge</span>, the patches are brought together along their <strong>rough</strong> boundaries (where Z-logical operators terminate).':'For an <span class="hl-amb">X-type merge</span>, the patches are brought together along their <strong>smooth</strong> boundaries (where X-logical operators terminate).'}<br/><br/>
+No measurement has happened yet — the two logical qubits are still completely independent.`,
+
+  ()=>`<strong>Step 2: Activate merge stabilizers</strong><br/><br/>
+New ${mergeType==='Z'?'<span class="hl-blue">Z-type</span>':'<span class="hl-amb">X-type</span>'} stabilizers turn on across the gap, fusing patch A and patch B into a single, larger lattice.<br/><br/>
+The two patches' local ${mergeType==='Z'?'logical Z':'logical X'} operators are now connected through the gap into <strong>one continuous logical operator</strong> of the merged patch.<br/><br/>
+Critically: the complementary operator (${mergeType==='Z'?'logical X':'logical Z'} of each original patch) is no longer individually protected — only the merged patch's new logical operators are well-defined.`,
+
+  ()=>`<strong>Step 3: ${ROUNDS} rounds of merged syndrome measurement</strong><br/><br/>
+The new boundary stabilizers are measured repeatedly — exactly like ordinary surface code error correction — to fault-tolerantly extract <strong>${mergeType==='Z'?'Z_A ⊗ Z_B':'X_A ⊗ X_B'}</strong> even in the presence of measurement noise.<br/><br/>
+Repetition over multiple rounds is what makes this measurement <span class="hl-grn">fault-tolerant</span> — a single noisy measurement round could give the wrong answer, but majority voting across rounds suppresses that error exponentially, just like in any QEC cycle.`,
+
+  ()=>`<strong>Step 4: Outcome revealed</strong><br/><br/>
+Measured value: <strong style="color:${outcome>0?'var(--grn)':'var(--red)'}">${mergeType==='Z'?'Z_A ⊗ Z_B':'X_A ⊗ X_B'} = ${outcome>0?'+1':'−1'}</strong><br/><br/>
+${outcomeDeterministic
+  ? `This was <span class="hl-grn">deterministic</span> — both patches were already eigenstates of the ${mergeType} basis, so the merge simply confirmed a value they already had. No disturbance occurred.`
+  : `This was <span class="hl-red">random</span> — at least one patch was prepared in the opposite eigenbasis, so the merge measurement forced a random outcome and <strong>entangled</strong> the two patches in the process. This randomness is exactly the same phenomenon as measuring a qubit in the "wrong" basis.`}`,
+
+  ()=>`<strong>Step 5: Split</strong><br/><br/>
+The gap (ancilla) qubits are now measured individually in the ${mergeType==='Z'?'X':'Z'} basis and discarded. This removes the merge stabilizers and separates the lattice back into two independent patches.<br/><br/>
+${outcomeDeterministic
+  ? `Since the outcome was deterministic, <span class="hl-grn">both patches return to their original states</span> — nothing was lost.`
+  : `Since the outcome was random, the two patches are now <span class="hl-red">correlated</span>: knowing one patch's state in the ${mergeType} basis tells you the other's, even though they are physically separated. This is the same resource used to build Bell pairs and, ultimately, logical CNOT.`}<br/><br/>
+This single merge-measure-split cycle is the atomic operation. Chaining two of them with an ancilla patch (see right) implements a full logical CNOT.`,
+];
+
+function setPills(){
+  for(let i=0;i<6;i++){
+    const p=document.getElementById('pill-'+i);
+    p.className = i<curStep ? 'step-pill done' : (i===curStep ? 'step-pill active' : 'step-pill');
+  }
+}
+
+function renderStep(){
+  document.getElementById('step-text').innerHTML = STEPS[curStep]();
+  document.getElementById('step-counter').textContent = `step ${curStep} / 5`;
+  document.getElementById('btn-prev').disabled = curStep===0;
+  document.getElementById('btn-next').disabled = curStep===5;
+  setPills();
+
+  const vv=document.getElementById('vv'), vm=document.getElementById('vm');
+  if(curStep>=4 && outcome!==null){
+    vv.textContent = `${mergeType==='Z'?'ZZ':'XX'} = ${outcome>0?'+1':'−1'}`;
+    vv.style.color = outcome>0?'var(--grn)':'var(--red)';
+    vm.textContent = outcomeDeterministic ? 'Deterministic — basis matched.' : 'Random — basis mismatch, patches now correlated.';
+  } else {
+    vv.textContent='—'; vv.style.color='var(--t3)';
+    vm.textContent='Run the protocol to see the measured eigenvalue.';
+  }
+
+  drawPatches();
+}
+
+function stepBy(d){
+  const next=curStep+d;
+  if(next<0||next>5) return;
+  curStep=next;
+  if(curStep===3) animateRounds();
+  if(curStep>=4 && outcome===null) computeOutcome();
+  renderStep();
+}
+
+let roundInterval = null;
+function animateRounds(){
+  if(roundInterval) clearInterval(roundInterval);
+  animRound=0;
+  roundInterval=setInterval(()=>{
+    animRound++;
+    drawPatches();
+    if(animRound>=ROUNDS){clearInterval(roundInterval);roundInterval=null;}
+  },350);
+}
+
+function runAll(){
+  const run=()=>{ if(curStep<5){stepBy(1); setTimeout(run, curStep===3?1300:700);} };
+  run();
+}
+
+function resetAll(){
+  if(roundInterval){clearInterval(roundInterval);roundInterval=null;}
+  curStep=0; outcome=null; outcomeDeterministic=true; animRound=0;
+  renderStep();
+}
+
+// =====================================================================
+//  INIT
+// =====================================================================
+resetAll();
+</script>
+</body>
+</html>
