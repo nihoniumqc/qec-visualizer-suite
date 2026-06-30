@@ -39,11 +39,6 @@ Intentionally minimal — no build pipeline, no package manager, no framework:
 
 Each tool is a single `index.html` file — no dependencies to install.
 
-```bash
-git clone https://github.com/<your-username>/qec-visualizer-suite.git
-cd qec-visualizer-suite
-```
-
 Open any `index.html` directly in a browser, or serve the folder with VS Code's **Live Server** extension for a nicer dev loop (auto-reload on save):
 
 1. Install the **Live Server** extension in VS Code
