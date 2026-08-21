@@ -1,771 +1,943 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>QEC Visualizer Suite · Niharika Verma</title>
-<meta name="description" content="Four free interactive tools that make quantum error correction visible. Built by Niharika Verma."/>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<meta name="description" content="Four free interactive tools that make quantum error correction visible. Built by Niharika Verma.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#06080e;--bg2:#0a0d16;--bg3:#0f1320;--bg4:#161c2d;
-  --b:rgba(255,255,255,.055);--b2:rgba(255,255,255,.1);
-  --t:#e2e6f4;--t2:#7a84a0;--t3:#3a4260;
-  --blue:#4f8ef7;--amb:#f7c14f;--grn:#3dd68c;
-  --red:#f7614f;--purp:#a47cf7;--teal:#3dcfc9;
+  --graphite-0:#0a0b0f;
+  --graphite-1:#12141a;
+  --graphite-2:#1a1d26;
+  --graphite-3:#262a37;
+  --paper:#e9eaef;
+  --paper-dim:#9aa0b4;
+  --amber:#f5a623;
+  --amber-2:#ffcb6b;
+  --magenta:#d6479c;
+  --magenta-2:#ff7ad1;
+  --glass-fill: rgba(255,255,255,0.055);
+  --glass-fill-strong: rgba(255,255,255,0.09);
+  --glass-edge: rgba(255,255,255,0.16);
+  --glass-edge-dim: rgba(255,255,255,0.07);
+  --radius: 22px;
+  --ease: cubic-bezier(.16,.84,.44,1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--graphite-0);
+  color:var(--paper);
+  font-family:'IBM Plex Sans',sans-serif;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+a{color:inherit;text-decoration:none;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+
+/* ===== animated lattice background ===== */
+#lattice{
+  position:fixed; inset:0; width:100%; height:100%;
+  z-index:0; display:block;
+}
+.grain{
+  position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--t);font-family:'Sora',sans-serif;overflow-x:hidden}
+/* floating liquid blobs, drift slowly beneath the glass */
+.blob{
+  position:fixed; border-radius:50%; filter:blur(70px); z-index:0; pointer-events:none;
+  will-change:transform;
+}
+.blob-a{ width:46vw; height:46vw; top:-14vw; left:-10vw;
+  background:radial-gradient(circle at 30% 30%, rgba(245,166,35,.35), rgba(245,166,35,0) 70%);
+  animation:drift1 26s ease-in-out infinite; }
+.blob-b{ width:38vw; height:38vw; bottom:-12vw; right:-8vw;
+  background:radial-gradient(circle at 60% 40%, rgba(214,71,156,.32), rgba(214,71,156,0) 70%);
+  animation:drift2 32s ease-in-out infinite; }
+.blob-c{ width:30vw; height:30vw; top:40vh; left:60vw;
+  background:radial-gradient(circle at 50% 50%, rgba(120,160,255,.18), rgba(120,160,255,0) 70%);
+  animation:drift3 22s ease-in-out infinite; }
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(6vw,8vh) scale(1.12)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-7vw,-6vh) scale(1.08)}}
+@keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-5vw,4vh) scale(.9)}66%{transform:translate(4vw,-5vh) scale(1.1)}}
 
-/* ── GRID BACKGROUND ── */
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(79,142,247,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(79,142,247,.03) 1px,transparent 1px);
-  background-size:48px 48px;
-  pointer-events:none;z-index:0;
-}
+.wrap{position:relative; z-index:2;}
+.container{max-width:1180px; margin:0 auto; padding:0 32px;}
 
-/* ── NAV ── */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  height:52px;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 2.5rem;
-  background:rgba(6,8,14,.85);
-  backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--b);
-}
-.nav-logo{
-  font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:600;
-  color:var(--t);letter-spacing:.04em;text-decoration:none;
-}
-.nav-logo span{color:var(--blue)}
-.nav-links{display:flex;gap:1.8rem;align-items:center}
-.nav-links a{
-  font-size:.72rem;color:var(--t2);text-decoration:none;
-  letter-spacing:.04em;transition:color .2s;font-family:'JetBrains Mono',monospace;
-}
-.nav-links a:hover{color:var(--t)}
-.nav-cta{
-  font-size:.68rem;padding:.3rem .85rem;border-radius:5px;
-  border:1px solid var(--blue);color:var(--blue);background:rgba(79,142,247,.08);
-  text-decoration:none;transition:all .2s;font-family:'JetBrains Mono',monospace;
-}
-.nav-cta:hover{background:rgba(79,142,247,.18)!important;color:var(--blue)!important}
+/* ===== SVG liquid distortion filter target ===== */
+svg.defs{position:absolute; width:0; height:0;}
 
-/* ── HERO ── */
-#hero{
-  min-height:100vh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding:6rem 2rem 4rem;position:relative;text-align:center;
-}
-
-/* Animated orbs */
-.orb{
-  position:absolute;border-radius:50%;filter:blur(80px);
-  pointer-events:none;animation:drift 12s ease-in-out infinite alternate;
-}
-.orb1{width:500px;height:500px;background:rgba(79,142,247,.07);top:-100px;left:-150px;animation-delay:0s}
-.orb2{width:400px;height:400px;background:rgba(164,124,247,.06);top:100px;right:-100px;animation-delay:-4s}
-.orb3{width:300px;height:300px;background:rgba(61,214,140,.05);bottom:0;left:30%;animation-delay:-8s}
-@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(30px,20px) scale(1.05)}}
-
-.hero-tag{
-  font-size:.65rem;font-family:'JetBrains Mono',monospace;
-  color:var(--blue);letter-spacing:.14em;text-transform:uppercase;
-  margin-bottom:1.2rem;
-  display:flex;align-items:center;gap:.6rem;
-}
-.hero-tag::before,.hero-tag::after{content:'';width:28px;height:1px;background:var(--blue);opacity:.4}
-
-h1{
-  font-size:clamp(2.4rem,6vw,4.2rem);font-weight:700;
-  line-height:1.08;letter-spacing:-.03em;
-  margin-bottom:1.4rem;max-width:820px;
-}
-h1 .hl{
-  background:linear-gradient(135deg,var(--blue) 0%,var(--purp) 50%,var(--teal) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}
-
-.hero-sub{
-  font-size:1.05rem;color:var(--t2);font-weight:300;
-  max-width:540px;line-height:1.75;margin-bottom:2.5rem;
-}
-
-.hero-btns{display:flex;gap:.8rem;flex-wrap:wrap;justify-content:center;margin-bottom:3.5rem}
-.btn-primary{
-  padding:.65rem 1.6rem;border-radius:7px;
-  background:var(--blue);color:#fff;
-  font-size:.82rem;font-weight:500;text-decoration:none;
-  transition:all .2s;border:1px solid var(--blue);
-}
-.btn-primary:hover{background:rgba(79,142,247,.85);transform:translateY(-1px)}
-.btn-secondary{
-  padding:.65rem 1.6rem;border-radius:7px;
-  border:1px solid var(--b2);color:var(--t2);
-  font-size:.82rem;text-decoration:none;
-  transition:all .2s;
-}
-.btn-secondary:hover{border-color:var(--b);color:var(--t);background:rgba(255,255,255,.04)}
-
-/* Stats row */
-.stats{
-  display:flex;gap:2.5rem;flex-wrap:wrap;justify-content:center;
-  padding-top:2rem;border-top:1px solid var(--b);
-}
-.stat-item{text-align:center}
-.stat-n{
-  font-size:1.8rem;font-weight:700;font-family:'JetBrains Mono',monospace;
-  letter-spacing:-.02em;
-}
-.stat-l{font-size:.68rem;color:var(--t2);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;margin-top:.2rem}
-
-/* ── TOOLS SECTION ── */
-#tools{
-  padding:5rem 2rem 6rem;
-  max-width:1200px;margin:0 auto;position:relative;z-index:1;
-}
-.sec-label{
-  font-size:.62rem;font-family:'JetBrains Mono',monospace;
-  color:var(--t3);letter-spacing:.12em;text-transform:uppercase;
-  text-align:center;margin-bottom:.75rem;
-}
-.sec-title{
-  font-size:clamp(1.6rem,4vw,2.4rem);font-weight:600;
-  text-align:center;letter-spacing:-.02em;margin-bottom:.75rem;
-}
-.sec-sub{
-  font-size:.9rem;color:var(--t2);text-align:center;
-  max-width:480px;margin:0 auto 3.5rem;line-height:1.7;font-weight:300;
-}
-
-.tools-grid{display:flex;flex-direction:column;gap:1.5rem}
-
-.tool-card{
-  background:var(--bg2);
-  border:1px solid var(--b);
-  border-radius:14px;
+/* ===== glass core ===== */
+.glass{
+  background:linear-gradient(155deg, var(--glass-fill-strong), var(--glass-fill) 55%, rgba(255,255,255,0.02));
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border:1px solid var(--glass-edge);
+  border-radius:var(--radius);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 0 40px rgba(255,255,255,.02),
+    0 20px 50px -20px rgba(0,0,0,.65);
+  position:relative;
   overflow:hidden;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  transition:border-color .25s,transform .2s;
+  transition: transform .5s var(--ease), box-shadow .5s var(--ease), border-color .5s var(--ease);
+}
+.glass::before{
+  /* specular sweep */
+  content:"";
+  position:absolute; inset:-2px;
+  background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.16) 45%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.16) 55%, transparent 70%);
+  background-size:250% 250%;
+  background-position:120% 120%;
+  opacity:0;
+  transition:opacity .4s ease;
+  pointer-events:none;
+}
+.glass:hover::before{
+  opacity:1;
+  animation:sweep 1.6s var(--ease) forwards;
+}
+@keyframes sweep{ from{background-position:130% 130%;} to{background-position:-30% -30%;} }
+.glass:hover{ transform:translateY(-4px); border-color:rgba(255,255,255,.3); }
+
+/* ===== nav ===== */
+nav{
+  position:fixed; top:18px; left:0; right:0; z-index:50;
+  display:flex; justify-content:center;
+}
+.nav-inner{
+  width:min(1180px, 92%);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px; border-radius:999px;
+  background:rgba(18,20,26,.55);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 10px 30px -12px rgba(0,0,0,.6);
+  transition:padding .3s var(--ease), background .3s var(--ease);
+}
+nav.scrolled .nav-inner{ padding:8px 18px; background:rgba(14,15,20,.72);}
+.brand{font-weight:700; letter-spacing:.02em; font-size:15px; display:flex; align-items:center; gap:8px;}
+.brand .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--magenta)); box-shadow:0 0 12px var(--amber);}
+.nav-links{display:flex; gap:26px; font-size:14px; color:var(--paper-dim);}
+.nav-links a{position:relative; padding:4px 0; transition:color .25s;}
+.nav-links a:hover{color:var(--paper);}
+.nav-links a::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:1px;background:linear-gradient(90deg,var(--amber),var(--magenta));transition:width .3s var(--ease);}
+.nav-links a:hover::after{width:100%;}
+.nav-cta{
+  font-size:13px; padding:9px 16px; border-radius:999px;
+  background:linear-gradient(135deg, rgba(245,166,35,.22), rgba(214,71,156,.22));
+  border:1px solid rgba(255,255,255,.18);
+  transition:transform .3s var(--ease), border-color .3s;
+}
+.nav-cta:hover{transform:scale(1.04); border-color:rgba(255,255,255,.35);}
+@media (max-width:720px){.nav-links{display:none;}}
+
+/* ===== hero ===== */
+header.hero{
+  padding:180px 0 100px;
   position:relative;
 }
-.tool-card:hover{border-color:var(--b2);transform:translateY(-2px)}
-.tool-card::before{
-  content:'';position:absolute;inset:0;border-radius:14px;opacity:0;
-  transition:opacity .3s;pointer-events:none;
+.eyebrow{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--amber-2); margin-bottom:26px;
+  opacity:0; transform:translateY(14px);
+  animation:rise .8s var(--ease) .1s forwards;
 }
-.tc-blue::before{background:radial-gradient(ellipse at 0% 50%,rgba(79,142,247,.06) 0%,transparent 65%)}
-.tc-amb::before{background:radial-gradient(ellipse at 0% 50%,rgba(247,193,79,.06) 0%,transparent 65%)}
-.tc-purp::before{background:radial-gradient(ellipse at 0% 50%,rgba(164,124,247,.06) 0%,transparent 65%)}
-.tc-teal::before{background:radial-gradient(ellipse at 0% 50%,rgba(61,207,201,.06) 0%,transparent 65%)}
-.tool-card:hover::before{opacity:1}
+.eyebrow::before{content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--amber),transparent);}
+h1.hero-title{
+  font-size:clamp(38px, 6.4vw, 76px);
+  line-height:1.02; font-weight:700; letter-spacing:-.02em;
+  max-width:920px;
+  opacity:0; transform:translateY(20px);
+  animation:rise .9s var(--ease) .22s forwards;
+}
+h1.hero-title .accent{
+  background:linear-gradient(100deg, var(--amber-2), var(--magenta-2) 60%, #9fb4ff);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  background-size:200% 100%;
+  animation:hue-drift 8s ease-in-out infinite;
+}
+@keyframes hue-drift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+p.hero-sub{
+  margin-top:26px; max-width:560px; font-size:17.5px; line-height:1.6; color:var(--paper-dim);
+  opacity:0; transform:translateY(18px);
+  animation:rise .9s var(--ease) .34s forwards;
+}
+.hero-actions{margin-top:38px; display:flex; gap:14px; flex-wrap:wrap;
+  opacity:0; transform:translateY(18px);
+  animation:rise .9s var(--ease) .44s forwards;
+}
+.btn{
+  padding:14px 26px; border-radius:999px; font-size:14.5px; font-weight:500;
+  display:inline-flex; align-items:center; gap:8px;
+  transition:transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--amber),var(--magenta));
+  color:#100b06; font-weight:600;
+  box-shadow:0 14px 34px -14px rgba(245,166,35,.55);
+}
+.btn-primary:hover{transform:translateY(-3px); box-shadow:0 18px 40px -12px rgba(214,71,156,.6);}
+.btn-ghost{
+  background:var(--glass-fill); border:1px solid var(--glass-edge);
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+}
+.btn-ghost:hover{transform:translateY(-3px); border-color:rgba(255,255,255,.4);}
+@keyframes rise{to{opacity:1; transform:translateY(0);}}
 
-.tool-left{padding:2.2rem 2rem 2rem 2.2rem;display:flex;flex-direction:column;justify-content:space-between}
-.tool-right{
-  position:relative;overflow:hidden;
-  border-left:1px solid var(--b);
-  min-height:220px;display:flex;align-items:center;justify-content:center;
+/* stat strip */
+.stats{
+  margin-top:80px; display:grid; grid-template-columns:repeat(4,1fr); gap:16px;
+}
+.stat-card{padding:22px 20px;}
+.stat-card .num{font-family:'Space Grotesk'; font-size:30px; font-weight:700;
+  background:linear-gradient(120deg,var(--amber-2),var(--magenta-2));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.stat-card .label{margin-top:6px; font-size:12.5px; color:var(--paper-dim); font-family:'IBM Plex Mono';}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,1fr);}}
+
+/* ===== section shell ===== */
+section{padding:110px 0; position:relative;}
+.section-head{max-width:640px; margin-bottom:60px;}
+.section-eyebrow{font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--magenta-2); margin-bottom:14px;}
+.section-head h2{font-size:clamp(28px,4vw,42px); font-weight:600; letter-spacing:-.01em; line-height:1.15;}
+.section-head p{margin-top:16px; color:var(--paper-dim); font-size:16px; line-height:1.6;}
+
+.reveal{opacity:0; transform:translateY(34px); transition:opacity .8s var(--ease), transform .8s var(--ease);}
+.reveal.in{opacity:1; transform:translateY(0);}
+
+/* ===== basics tabs ===== */
+.basics-shell{padding:14px;}
+.tab-row{
+  display:flex; gap:8px; flex-wrap:wrap; padding:8px; margin-bottom:28px;
+  border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+}
+.tab-btn{
+  font-family:'IBM Plex Mono'; font-size:12.5px; letter-spacing:.03em;
+  padding:10px 18px; border-radius:999px; color:var(--paper-dim);
+  border:1px solid transparent; background:transparent; cursor:pointer;
+  transition:color .3s, background .3s, border-color .3s;
+  white-space:nowrap;
+}
+.tab-btn:hover{color:var(--paper);}
+.tab-btn.active{
+  color:#0e0b06; background:linear-gradient(120deg,var(--amber-2),var(--magenta-2));
+  border-color:rgba(255,255,255,.3);
+  font-weight:600;
+}
+.tab-panels{position:relative; min-height:380px;}
+.tab-panel{
+  display:none; grid-template-columns:1fr 1fr; gap:36px; align-items:center; padding:40px;
+}
+.tab-panel.active{display:grid; animation:panelIn .55s var(--ease);}
+@keyframes panelIn{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);}}
+@media (max-width:820px){.tab-panel{grid-template-columns:1fr;}}
+.tab-copy .eyebrow2{font-family:'IBM Plex Mono'; font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber-2); margin-bottom:10px;}
+.tab-copy h3{font-size:24px; font-weight:600; margin-bottom:14px; line-height:1.25;}
+.tab-copy p{color:var(--paper-dim); font-size:15px; line-height:1.7;}
+.tab-copy p + p{margin-top:12px;}
+.tab-visual{
+  position:relative; height:280px; border-radius:16px;
+  background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.05), transparent 70%);
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(255,255,255,.07);
+  overflow:hidden;
 }
 
-.tool-num{
-  font-size:.62rem;font-family:'JetBrains Mono',monospace;
-  font-weight:600;letter-spacing:.1em;margin-bottom:.9rem;
+/* -- visual: qubit / bloch sphere -- */
+.bloch{position:relative; width:180px; height:180px;}
+.bloch-ring{
+  position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(255,203,107,.5);
+  transform:rotateX(70deg); animation:spin 7s linear infinite;
 }
-.tc-blue .tool-num{color:var(--blue)}
-.tc-amb .tool-num{color:var(--amb)}
-.tc-purp .tool-num{color:var(--purp)}
-.tc-teal .tool-num{color:var(--teal)}
+.bloch-ring.r2{border-color:rgba(255,122,209,.4); transform:rotateX(70deg) rotateZ(60deg); animation-duration:9s; animation-direction:reverse;}
+.bloch-ring.r3{border-color:rgba(150,190,255,.35); transform:rotateX(70deg) rotateZ(120deg); animation-duration:11s;}
+@keyframes spin{ from{transform:rotateX(70deg) rotateY(0deg);} to{transform:rotateX(70deg) rotateY(360deg);} }
+.bloch-core{
+  position:absolute; left:50%; top:50%; width:14px; height:14px; margin:-7px;
+  border-radius:50%; background:radial-gradient(circle,#fff,var(--amber-2));
+  box-shadow:0 0 22px var(--amber-2);
+}
+.bloch-state{
+  position:absolute; width:9px; height:9px; border-radius:50%; background:var(--magenta-2);
+  box-shadow:0 0 14px var(--magenta-2);
+  animation:orbit 4s linear infinite;
+  offset-path: path("M90,10 A80,80 0 1,1 89.9,10");
+}
+@keyframes orbit{ from{offset-distance:0%;} to{offset-distance:100%;} }
+.bloch-label{position:absolute; font-family:'IBM Plex Mono'; font-size:11px; color:var(--paper-dim);}
+.bloch-label.l0{top:6px; left:50%; transform:translateX(-50%);}
+.bloch-label.l1{bottom:6px; left:50%; transform:translateX(-50%);}
 
-.tool-title{
-  font-size:1.35rem;font-weight:600;letter-spacing:-.02em;
-  margin-bottom:.6rem;line-height:1.2;
+/* -- visual: superposition -- */
+.superpos{display:flex; align-items:center; gap:26px;}
+.spin-blob{
+  width:64px; height:64px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono'; font-size:13px;
+  border:1.5px solid rgba(255,255,255,.25);
 }
-.tool-desc{
-  font-size:.82rem;color:var(--t2);line-height:1.7;
-  margin-bottom:1.3rem;flex:1;font-weight:300;
+.spin-blob.b0{background:radial-gradient(circle,rgba(255,203,107,.35),transparent 70%); animation:pulse0 2.6s ease-in-out infinite;}
+.spin-blob.b1{background:radial-gradient(circle,rgba(255,122,209,.35),transparent 70%); animation:pulse1 2.6s ease-in-out infinite;}
+@keyframes pulse0{0%,100%{transform:scale(1); opacity:.5;} 50%{transform:scale(1.25); opacity:1;}}
+@keyframes pulse1{0%,100%{transform:scale(1.25); opacity:1;} 50%{transform:scale(1); opacity:.5;}}
+.superpos .plus{font-family:'IBM Plex Mono'; color:var(--paper-dim); font-size:20px;}
+.superpos-wave{position:absolute; bottom:18px; left:0; right:0; height:34px; opacity:.55;}
+
+/* -- visual: decoherence / error -- */
+.err-qubit{width:70px; height:70px; border-radius:16px; position:relative;
+  background:linear-gradient(135deg, rgba(150,190,255,.28), rgba(150,190,255,.06));
+  border:1.5px solid rgba(150,190,255,.4);
+  animation:flipcycle 3.2s ease-in-out infinite;
 }
-.tool-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.3rem}
+@keyframes flipcycle{
+  0%,60%{transform:rotateY(0deg); border-color:rgba(150,190,255,.4); background:linear-gradient(135deg, rgba(150,190,255,.28), rgba(150,190,255,.06));}
+  68%{transform:rotateY(180deg); border-color:rgba(255,110,110,.7); background:linear-gradient(135deg, rgba(255,110,110,.32), rgba(255,110,110,.08));}
+  85%{transform:rotateY(180deg); border-color:rgba(255,110,110,.7);}
+  95%,100%{transform:rotateY(360deg); border-color:rgba(150,190,255,.4); background:linear-gradient(135deg, rgba(150,190,255,.28), rgba(150,190,255,.06));}
+}
+.err-particles{position:absolute; inset:0;}
+.err-particles span{
+  position:absolute; width:4px; height:4px; border-radius:50%; background:rgba(255,110,110,.8);
+  animation:noisep 3.2s ease-in-out infinite;
+  opacity:0;
+}
+@keyframes noisep{ 0%,58%{opacity:0; transform:translateY(0);} 66%{opacity:1;} 80%{opacity:0; transform:translateY(-30px);} 100%{opacity:0;} }
+
+/* -- visual: stabilizer / syndrome grid -- */
+.stab-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+.stab-node{width:22px; height:22px; border-radius:50%; background:rgba(230,232,240,.4); border:1px solid rgba(255,255,255,.2); justify-self:center;}
+.stab-node.anc{background:transparent; border:1.5px dashed rgba(150,190,255,.5); width:26px; height:26px; animation:ancpulse 2.4s ease-in-out infinite;}
+.stab-node.anc.fire{animation:ancfire 2.4s ease-in-out infinite;}
+@keyframes ancpulse{0%,100%{box-shadow:0 0 0 rgba(150,190,255,0);} 50%{box-shadow:0 0 14px rgba(150,190,255,.5);}}
+@keyframes ancfire{0%,55%{border-color:rgba(150,190,255,.5); box-shadow:0 0 0 rgba(255,166,64,0);} 60%,80%{border-color:rgba(255,166,64,.9); box-shadow:0 0 18px rgba(255,166,64,.7); background:rgba(255,166,64,.25);} 95%,100%{border-color:rgba(150,190,255,.5); box-shadow:0 0 0 rgba(255,166,64,0); background:transparent;}}
+
+/* -- visual: surface code lattice mini -- */
+.mini-lattice{width:100%; height:100%;}
+
+.tools-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:22px;}
+@media (max-width:860px){.tools-grid{grid-template-columns:1fr;}}
+.tool-card{
+  padding:34px; display:flex; flex-direction:column; gap:16px; min-height:300px;
+  transform-style:preserve-3d;
+}
+.tool-index{font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:.12em; color:var(--paper-dim); display:flex; align-items:center; gap:10px;}
+.tool-index .badge{
+  width:34px;height:34px;border-radius:10px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, rgba(245,166,35,.25), rgba(214,71,156,.2));
+  border:1px solid rgba(255,255,255,.14); font-size:14px; color:var(--amber-2);
+}
+.tool-card h3{font-size:23px; font-weight:600; line-height:1.25;}
+.tool-card p{color:var(--paper-dim); font-size:15px; line-height:1.6; flex:1;}
+.tag-row{display:flex; gap:8px; flex-wrap:wrap;}
 .tag{
-  font-size:.59rem;padding:2px 8px;border-radius:10px;
-  border:1px solid;font-family:'JetBrains Mono',monospace;font-weight:500;
+  font-family:'IBM Plex Mono'; font-size:11.5px; padding:6px 10px; border-radius:999px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--paper-dim);
 }
-.tag-blue{border-color:rgba(79,142,247,.3);color:rgba(79,142,247,.8);background:rgba(79,142,247,.06)}
-.tag-amb{border-color:rgba(247,193,79,.3);color:rgba(247,193,79,.8);background:rgba(247,193,79,.06)}
-.tag-purp{border-color:rgba(164,124,247,.3);color:rgba(164,124,247,.8);background:rgba(164,124,247,.06)}
-.tag-grn{border-color:rgba(61,214,140,.3);color:rgba(61,214,140,.8);background:rgba(61,214,140,.06)}
-.tag-teal{border-color:rgba(61,207,201,.3);color:rgba(61,207,201,.8);background:rgba(61,207,201,.06)}
+.tool-open{
+  margin-top:6px; display:inline-flex; align-items:center; gap:8px; font-size:14.5px; font-weight:500;
+  color:var(--paper);
+}
+.tool-open .arrow{transition:transform .35s var(--ease);}
+.tool-card:hover .tool-open .arrow{transform:translate(4px,-4px);}
 
-.tool-link{
-  display:inline-flex;align-items:center;gap:.4rem;
-  font-size:.75rem;font-family:'JetBrains Mono',monospace;
-  font-weight:500;text-decoration:none;padding:.42rem .9rem;
-  border-radius:6px;border:1px solid;transition:all .2s;width:fit-content;
+/* ===== about ===== */
+.about-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:40px; align-items:start;}
+@media (max-width:860px){.about-grid{grid-template-columns:1fr;}}
+.about-card{padding:38px;}
+.about-card p{color:var(--paper-dim); line-height:1.75; font-size:16px; margin-top:16px;}
+.about-card .name{font-size:26px; font-weight:600; margin-bottom:4px;}
+.concept-list{display:flex; flex-direction:column; gap:14px;}
+.concept{
+  padding:20px 22px; display:flex; gap:16px; align-items:flex-start;
 }
-.tc-blue .tool-link{border-color:var(--blue);color:var(--blue)}
-.tc-blue .tool-link:hover{background:rgba(79,142,247,.12)}
-.tc-amb .tool-link{border-color:var(--amb);color:var(--amb)}
-.tc-amb .tool-link:hover{background:rgba(247,193,79,.1)}
-.tc-purp .tool-link{border-color:var(--purp);color:var(--purp)}
-.tc-purp .tool-link:hover{background:rgba(164,124,247,.1)}
-.tc-teal .tool-link{border-color:var(--teal);color:var(--teal)}
-.tc-teal .tool-link:hover{background:rgba(61,207,201,.1)}
-.tool-link svg{width:12px;height:12px;flex-shrink:0}
+.concept .glyph{
+  width:40px;height:40px;flex:0 0 40px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, rgba(120,160,255,.2), rgba(214,71,156,.18));
+  font-size:17px; border:1px solid rgba(255,255,255,.12);
+}
+.concept b{font-weight:600;}
+.concept span{color:var(--paper-dim); font-size:14.5px; line-height:1.55;}
 
-/* Tool preview canvases */
-.preview{width:100%;height:100%;position:absolute;inset:0}
+/* ===== footer ===== */
+footer{padding:70px 0 50px; text-align:center; color:var(--paper-dim); font-size:13.5px;}
+.footer-links{display:flex; justify-content:center; gap:22px; margin-bottom:26px; flex-wrap:wrap; font-size:13.5px;}
+.footer-links a{color:var(--paper-dim); transition:color .25s;}
+.footer-links a:hover{color:var(--amber-2);}
+.footer-rule{width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent); margin-bottom:26px;}
 
-/* ── ABOUT ── */
-#about{
-  padding:4rem 2rem 5rem;
-  background:var(--bg2);
-  border-top:1px solid var(--b);
-  border-bottom:1px solid var(--b);
-  position:relative;z-index:1;
-}
-.about-inner{
-  max-width:780px;margin:0 auto;
-  display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;
-}
-.about-left h2{
-  font-size:1.9rem;font-weight:600;letter-spacing:-.025em;
-  margin-bottom:1rem;line-height:1.2;
-}
-.about-left p{
-  font-size:.88rem;color:var(--t2);line-height:1.8;font-weight:300;margin-bottom:1rem;
-}
-.about-right{display:flex;flex-direction:column;gap:.7rem}
-.fact{
-  background:var(--bg3);border:1px solid var(--b);
-  border-radius:9px;padding:.85rem 1rem;
-  display:flex;align-items:flex-start;gap:.75rem;
-}
-.fact-icon{
-  width:28px;height:28px;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:.8rem;flex-shrink:0;margin-top:.05rem;
-}
-.fi-blue{background:rgba(79,142,247,.12);color:var(--blue)}
-.fi-grn{background:rgba(61,214,140,.12);color:var(--grn)}
-.fi-amb{background:rgba(247,193,79,.12);color:var(--amb)}
-.fi-purp{background:rgba(164,124,247,.12);color:var(--purp)}
-.fi-teal{background:rgba(61,207,201,.12);color:var(--teal)}
-.fact-text{font-size:.75rem;color:var(--t2);line-height:1.6}
-.fact-text strong{color:var(--t);font-weight:500}
-
-/* ── FOOTER ── */
-footer{
-  padding:2rem 2.5rem;
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:1rem;
-  border-top:1px solid var(--b);
-  position:relative;z-index:1;
-}
-.footer-left{font-size:.68rem;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1.7}
-.footer-links{display:flex;gap:1.4rem;flex-wrap:wrap}
-.footer-links a{font-size:.68rem;color:var(--t3);text-decoration:none;font-family:'JetBrains Mono',monospace;transition:color .2s}
-.footer-links a:hover{color:var(--t2)}
-
-@media(max-width:760px){
-  .tool-card{grid-template-columns:1fr}
-  .tool-right{display:none}
-  .about-inner{grid-template-columns:1fr}
-  nav .nav-links{display:none}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important;}
 }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">NV<span>.</span>QEC</a>
-  <div class="nav-links">
-    <a href="#tools">Tools</a>
-    <a href="#about">About</a>
-    <a href="https://3dspacetimedecoding.netlify.app" target="_blank">Spacetime</a>
-    <a href="https://mwpmdecoder.netlify.app" target="_blank">MWPM</a>
-    <a href="https://concatenatedcode.netlify.app" target="_blank">Concat</a>
-    <a href="https://latticesurgery.netlify.app" target="_blank">Lattice</a>
+<svg class="defs">
+  <filter id="liquid-distort" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence id="turb" type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<canvas id="lattice"></canvas>
+<div class="grain"></div>
+<div class="blob blob-a"></div>
+<div class="blob blob-b"></div>
+<div class="blob blob-c"></div>
+
+<div class="wrap">
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#"><span class="dot"></span>NV · QEC</a>
+    <div class="nav-links">
+      <a href="#basics">Basics</a>
+      <a href="#tools">Tools</a>
+      <a href="#about">About</a>
+    </div>
+    <a class="nav-cta" href="https://www.linkedin.com/in/" target="_blank" rel="noopener">LinkedIn ↗</a>
   </div>
-  <a href="https://linkedin.com" target="_blank" class="nav-cta">LinkedIn ↗</a>
 </nav>
 
-<!-- HERO -->
-<section id="hero">
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
-  <div class="orb orb3"></div>
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">Quantum Error Correction · Interactive Visualizers</div>
+    <h1 class="hero-title">Making quantum<br>error correction <span class="accent">visible</span></h1>
+    <p class="hero-sub">Four free, interactive tools that take QEC out of the papers and into your browser. No install. No login. Just the physics, made tangible.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#tools">Explore the tools →</a>
+      <a class="btn btn-ghost" href="./tools/spacetime.html">Open 3D Spacetime ↗</a>
+    </div>
 
-  <div class="hero-tag">Quantum Error Correction · Interactive Visualizers</div>
-
-  <h1>Making <span class="hl">quantum error<br/>correction</span> visible</h1>
-
-  <p class="hero-sub">
-    Four free, interactive tools that take QEC out of the papers and into your browser.
-    No install. No login. Just the physics, made tangible.
-  </p>
-
-  <div class="hero-btns">
-    <a href="#tools" class="btn-primary">Explore the tools →</a>
-    <a href="https://3dspacetimedecoding.netlify.app" target="_blank" class="btn-secondary">Open 3D Spacetime ↗</a>
+    <div class="stats reveal">
+      <div class="stat-card glass"><div class="num">6</div><div class="label">interactive tools</div></div>
+      <div class="stat-card glass"><div class="num">free</div><div class="label">no login needed</div></div>
+      <div class="stat-card glass"><div class="num">live</div><div class="label">in your browser</div></div>
+      <div class="stat-card glass"><div class="num">QEC</div><div class="label">surface codes</div></div>
+    </div>
   </div>
+</header>
 
-  <div class="stats">
-    <div class="stat-item">
-      <div class="stat-n" style="color:var(--blue)">4</div>
-      <div class="stat-l">interactive tools</div>
+<section id="basics">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Start Here</div>
+      <h2>Basics of quantum computing &amp; QEC</h2>
+      <p>A five-minute run-up before the tools — what a qubit is, why it breaks, and how error correction fights back. Skip it if you already live here.</p>
     </div>
-    <div class="stat-item">
-      <div class="stat-n" style="color:var(--grn)">free</div>
-      <div class="stat-l">no login needed</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-n" style="color:var(--amb)">live</div>
-      <div class="stat-l">in your browser</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-n" style="color:var(--purp)">QEC</div>
-      <div class="stat-l">surface codes</div>
+
+    <div class="basics-shell glass reveal">
+      <div class="tab-row" role="tablist">
+        <button class="tab-btn active" data-tab="qubit">01 · Qubit</button>
+        <button class="tab-btn" data-tab="superposition">02 · Superposition</button>
+        <button class="tab-btn" data-tab="errors">03 · Decoherence</button>
+        <button class="tab-btn" data-tab="stabilizers">04 · Stabilizers</button>
+        <button class="tab-btn" data-tab="surfacecode">05 · Surface code</button>
+      </div>
+
+      <div class="tab-panels">
+
+        <div class="tab-panel active" data-panel="qubit">
+          <div class="tab-copy">
+            <div class="eyebrow2">01 — The unit</div>
+            <h3>A qubit isn't a bit that's just "maybe"</h3>
+            <p>A classical bit is 0 or 1. A qubit is a point on the Bloch sphere — any state |ψ⟩ = α|0⟩ + β|1⟩ with |α|² + |β|² = 1. The poles are the classical states; everywhere else is genuinely quantum.</p>
+            <p>That continuous freedom is the whole source of quantum advantage — and the whole reason error correction is hard. There's no discrete "flip" to simply re-measure and fix.</p>
+          </div>
+          <div class="tab-visual">
+            <div class="bloch">
+              <div class="bloch-ring"></div>
+              <div class="bloch-ring r2"></div>
+              <div class="bloch-ring r3"></div>
+              <div class="bloch-core"></div>
+              <div class="bloch-state"></div>
+              <div class="bloch-label l0">|0⟩</div>
+              <div class="bloch-label l1">|1⟩</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="superposition">
+          <div class="tab-copy">
+            <div class="eyebrow2">02 — The resource</div>
+            <h3>Superposition &amp; entanglement</h3>
+            <p>Superposition lets one qubit carry a weighted blend of |0⟩ and |1⟩ simultaneously. Entangle several qubits and their joint state can't be written as separate individual states at all — measuring one instantly constrains the others.</p>
+            <p>QEC codes are built entirely out of entanglement: a logical qubit is smeared redundantly across many physical qubits, so no single physical error can read out — or destroy — the encoded information.</p>
+          </div>
+          <div class="tab-visual">
+            <div class="superpos">
+              <div class="spin-blob b0">|0⟩</div>
+              <div class="plus">+</div>
+              <div class="spin-blob b1">|1⟩</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="errors">
+          <div class="tab-copy">
+            <div class="eyebrow2">03 — The problem</div>
+            <h3>Decoherence doesn't wait for you</h3>
+            <p>Qubits leak into their environment constantly. Bit flips (X), phase flips (Z), and their combination (Y) accumulate at rates measured in microseconds — long before most useful algorithms finish running.</p>
+            <p>Worse: you can't just measure a qubit to check if it flipped. Measurement collapses the superposition itself. QEC has to detect errors without ever learning the state it's protecting.</p>
+          </div>
+          <div class="tab-visual">
+            <div class="err-qubit"></div>
+            <div class="err-particles">
+              <span style="left:30%; top:60%; animation-delay:0s;"></span>
+              <span style="left:55%; top:65%; animation-delay:.15s;"></span>
+              <span style="left:45%; top:55%; animation-delay:.3s;"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="stabilizers">
+          <div class="tab-copy">
+            <div class="eyebrow2">04 — The trick</div>
+            <h3>Measure the error, not the data</h3>
+            <p>Stabilizer codes measure joint parity operators (stabilizers) across groups of data qubits using ancilla qubits — without ever measuring the data qubits themselves. A flipped ancilla outcome (a "syndrome") flags that an error occurred nearby, without revealing what the logical state actually is.</p>
+            <p>Read syndromes round after round and you get a defect pattern in space and time — exactly what a decoder like MWPM is built to interpret.</p>
+          </div>
+          <div class="tab-visual">
+            <div class="stab-grid">
+              <div class="stab-node"></div><div class="stab-node anc"></div><div class="stab-node"></div>
+              <div class="stab-node anc fire"></div><div class="stab-node"></div><div class="stab-node anc"></div>
+              <div class="stab-node"></div><div class="stab-node anc"></div><div class="stab-node"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="surfacecode">
+          <div class="tab-copy">
+            <div class="eyebrow2">05 — The workhorse</div>
+            <h3>The surface code</h3>
+            <p>Data and ancilla qubits alternate on a 2D lattice. Each ancilla stabilizes its neighboring data qubits; syndromes light up on a checkerboard pattern whenever an error occurs. It's local, planar, and matches real superconducting and neutral-atom hardware layouts — which is why it's the leading candidate for fault tolerance today.</p>
+            <p>Every tool in the suite below is a different lens on this same lattice: how errors move through it, how decoders read it, and how logical gates are performed on it.</p>
+          </div>
+          <div class="tab-visual">
+            <canvas class="mini-lattice" id="miniLattice"></canvas>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </section>
 
-<!-- TOOLS -->
 <section id="tools">
-  <div class="sec-label">The Suite</div>
-  <h2 class="sec-title">Four tools. One field.</h2>
-  <p class="sec-sub">Each tool isolates a core concept in quantum error correction — from noise thresholds to spacetime decoding to the MWPM algorithm to lattice surgery.</p>
-
-  <div class="tools-grid">
-
-    <!-- Tool 1: 3D Spacetime -->
-    <div class="tool-card tc-blue">
-      <div class="tool-left">
-        <div>
-          <div class="tool-num">TOOL 01 ── SPACETIME</div>
-          <div class="tool-title">Syndrome History &<br/>Spacetime Visualizer</div>
-          <p class="tool-desc">
-            Errors in a quantum computer don't just happen in space — they persist through time.
-            This tool renders the full 3D spacetime volume that modern decoders like Harmony and
-            Sparse Blossom actually operate on. Inject errors, watch worldlines form, toggle
-            decoder matching overlays.
-          </p>
-          <div class="tool-tags">
-            <span class="tag tag-blue">3D interactive</span>
-            <span class="tag tag-blue">defect worldlines</span>
-            <span class="tag tag-blue">T = 6 rounds</span>
-            <span class="tag tag-grn">Harmony / Sparse Blossom</span>
-          </div>
-        </div>
-        <a href="https://3dspacetimedecoding.netlify.app" target="_blank" class="tool-link">
-          Open tool
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10L10 2M10 2H5M10 2v5"/></svg>
-        </a>
-      </div>
-      <div class="tool-right">
-        <canvas class="preview" id="prev1"></canvas>
-      </div>
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">The Suite</div>
+      <h2>Six tools. One field.</h2>
+      <p>Each tool isolates a core concept in quantum error correction — from noise thresholds to spacetime decoding to the MWPM algorithm to lattice surgery to building stabilizer codes and applying logical gates by hand.</p>
     </div>
 
-    <!-- Tool 2: MWPM -->
-    <div class="tool-card tc-amb">
-      <div class="tool-left">
-        <div>
-          <div class="tool-num">TOOL 02 ── DECODER</div>
-          <div class="tool-title">MWPM Decoder<br/>Visualizer</div>
-          <p class="tool-desc">
-            Minimum Weight Perfect Matching is the algorithm running inside almost every
-            serious surface code experiment today. This tool slows it down to human speed.
-            Inject X errors, watch the defect graph form, see every matching evaluated,
-            and get a verdict: corrected or logical error.
-          </p>
-          <div class="tool-tags">
-            <span class="tag tag-amb">step-by-step</span>
-            <span class="tag tag-amb">defect graph</span>
-            <span class="tag tag-amb">5×5 patch</span>
-            <span class="tag tag-grn">logical error detection</span>
-          </div>
+    <div class="tools-grid">
+      <a class="tool-card glass tilt reveal" href="./tools/spacetime.html">
+        <div class="tool-index"><span class="badge">01</span>SPACETIME</div>
+        <h3>Syndrome History &amp; Spacetime Visualizer</h3>
+        <p>Errors in a quantum computer don't just happen in space — they persist through time. This tool renders the full 3D spacetime volume that modern decoders like Harmony and Sparse Blossom actually operate on. Inject errors, watch worldlines form, toggle decoder matching overlays.</p>
+        <div class="tag-row">
+          <span class="tag">3D interactive defect worldlines</span>
+          <span class="tag">T = 6 rounds</span>
+          <span class="tag">Harmony / Sparse Blossom</span>
         </div>
-        <a href="https://mwpmdecoder.netlify.app" target="_blank" class="tool-link">
-          Open tool
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10L10 2M10 2H5M10 2v5"/></svg>
-        </a>
-      </div>
-      <div class="tool-right">
-        <canvas class="preview" id="prev2"></canvas>
-      </div>
-    </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
+      </a>
 
-    <!-- Tool 3: Concatenated Code -->
-    <div class="tool-card tc-purp">
-      <div class="tool-left">
-        <div>
-          <div class="tool-num">TOOL 03 ── THRESHOLD</div>
-          <div class="tool-title">Concatenated Code<br/>Explorer</div>
-          <p class="tool-desc">
-            The fault-tolerance threshold is the single most important number in QEC.
-            Drag the noise slider below it and watch logical error rates collapse
-            exponentially with each concatenation level. Push above it and watch
-            them explode. The threshold theorem, made visceral.
-          </p>
-          <div class="tool-tags">
-            <span class="tag tag-purp">[[3,1,3]] code</span>
-            <span class="tag tag-purp">up to level 5</span>
-            <span class="tag tag-purp">threshold slider</span>
-            <span class="tag tag-grn">exponential suppression</span>
-          </div>
+      <a class="tool-card glass tilt reveal" href="./tools/mwpm.html">
+        <div class="tool-index"><span class="badge">02</span>DECODER</div>
+        <h3>MWPM Decoder Visualizer</h3>
+        <p>Minimum Weight Perfect Matching is the algorithm running inside almost every serious surface code experiment today. This tool slows it down to human speed. Inject X errors, watch the defect graph form, see every matching evaluated, and get a verdict: corrected or logical error.</p>
+        <div class="tag-row">
+          <span class="tag">step-by-step defect graph</span>
+          <span class="tag">5×5 patch</span>
+          <span class="tag">logical error detection</span>
         </div>
-        <a href="https://concatenatedcode.netlify.app" target="_blank" class="tool-link">
-          Open tool
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10L10 2M10 2H5M10 2v5"/></svg>
-        </a>
-      </div>
-      <div class="tool-right">
-        <canvas class="preview" id="prev3"></canvas>
-      </div>
-    </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
+      </a>
 
-    <!-- Tool 4: Lattice Surgery -->
-    <div class="tool-card tc-teal">
-      <div class="tool-left">
-        <div>
-          <div class="tool-num">TOOL 04 ── SURGERY</div>
-          <div class="tool-title">Lattice Surgery /<br/>Logical CNOT</div>
-          <p class="tool-desc">
-            Transversal gates are a luxury real hardware doesn't have. Google and IBM run their
-            two-qubit logical gates by merging and splitting surface-code patches along their
-            boundaries. Pick initial states for two patches, choose a merge type, and step through
-            the full protocol — ancilla init, stabilizer activation, multi-round measurement,
-            outcome, and split — then see exactly how two of these cycles chain into a full CNOT.
-          </p>
-          <div class="tool-tags">
-            <span class="tag tag-teal">merge & split</span>
-            <span class="tag tag-teal">interactive step-by-step</span>
-            <span class="tag tag-teal">joint Pauli measurement</span>
-            <span class="tag tag-grn">CNOT protocol explainer</span>
-          </div>
+      <a class="tool-card glass tilt reveal" href="./tools/concat.html">
+        <div class="tool-index"><span class="badge">03</span>THRESHOLD</div>
+        <h3>Concatenated Code Explorer</h3>
+        <p>The fault-tolerance threshold is the single most important number in QEC. Drag the noise slider below it and watch logical error rates collapse exponentially with each concatenation level. Push above it and watch them explode. The threshold theorem, made visceral.</p>
+        <div class="tag-row">
+          <span class="tag">[[3,1,3]] code</span>
+          <span class="tag">up to level 5</span>
+          <span class="tag">threshold slider</span>
         </div>
-        <a href="https://latticesurgery.netlify.app" target="_blank" class="tool-link">
-          Open tool
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10L10 2M10 2H5M10 2v5"/></svg>
-        </a>
-      </div>
-      <div class="tool-right">
-        <canvas class="preview" id="prev4"></canvas>
-      </div>
-    </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
+      </a>
 
-  </div>
-</section>
+      <a class="tool-card glass tilt reveal" href="./tools/lattice-surgery.html">
+        <div class="tool-index"><span class="badge">04</span>SURGERY</div>
+        <h3>Lattice Surgery / Logical CNOT</h3>
+        <p>Transversal gates are a luxury real hardware doesn't have. Google and IBM run their two-qubit logical gates by merging and splitting surface-code patches along their boundaries. Pick initial states for two patches, choose a merge type, and step through the full protocol.</p>
+        <div class="tag-row">
+          <span class="tag">merge &amp; split</span>
+          <span class="tag">joint Pauli measurement</span>
+          <span class="tag">CNOT protocol</span>
+        </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
+      </a>
 
-<!-- ABOUT -->
-<section id="about">
-  <div class="about-inner">
-    <div class="about-left">
-      <h2>Built by<br/>Niharika Verma</h2>
-      <p>Quantum error correction researcher focused on surface codes, decoding architectures, and fault-tolerant systems.</p>
-      <p>These tools exist because QEC is one of the most consequential problems in science right now — and almost none of it was visible outside a handful of research groups. That felt wrong.</p>
-      <a href="https://www.linkedin.com/in/" target="_blank" style="font-size:.75rem;font-family:'JetBrains Mono',monospace;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;margin-top:.5rem">
-        Connect on LinkedIn ↗
+      <a class="tool-card glass tilt reveal" href="./tools/stabilizers.html">
+        <div class="tool-index"><span class="badge">05</span>STABILIZERS</div>
+        <h3>Stabilizer Circuit Builder</h3>
+        <p>Pick a stabilizer code — 3-qubit repetition codes or the [[7,1,3]] Steane code — and build it from scratch. Inject Pauli errors on any physical qubit, watch exactly which generators fire, and let the tool propose the minimum-weight correction your syndrome implies.</p>
+        <div class="tag-row">
+          <span class="tag">X / Z stabilizer groups</span>
+          <span class="tag">syndrome extraction</span>
+          <span class="tag">correction lookup</span>
+        </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
+      </a>
+
+      <a class="tool-card glass tilt reveal" href="./tools/logical-gates.html">
+        <div class="tool-index"><span class="badge">06</span>LOGICAL GATES</div>
+        <h3>Logical Gate Walkthrough</h3>
+        <p>Watch H, S, and CNOT act transversally on the Steane code — one physical gate per physical qubit, no error spreading. Then see why T can't: step through gate teleportation via a magic state, the standard way stabilizer codes get a universal gate set past the Eastin–Knill theorem.</p>
+        <div class="tag-row">
+          <span class="tag">transversal Clifford gates</span>
+          <span class="tag">Eastin–Knill</span>
+          <span class="tag">magic-state teleportation</span>
+        </div>
+        <span class="tool-open">Open tool <span class="arrow">↗</span></span>
       </a>
     </div>
-    <div class="about-right">
-      <div class="fact">
-        <div class="fact-icon fi-blue">⬡</div>
-        <div class="fact-text"><strong>Surface codes</strong> — the leading architecture for fault-tolerant quantum computing, used by Google, IBM, and Microsoft.</div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Built by Niharika Verma</div>
+      <h2>Quantum error correction researcher</h2>
+      <p>Focused on surface codes, decoding architectures, and fault-tolerant systems.</p>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-card glass reveal">
+        <div class="name">Why this exists</div>
+        <p>QEC is one of the most consequential problems in science right now — and almost none of it was visible outside a handful of research groups. That felt wrong.</p>
+        <p>These four tools exist to close that gap: free, interactive, and built directly from the algorithms running in real labs today.</p>
+        <div class="hero-actions" style="margin-top:28px;">
+          <a class="btn btn-primary" href="https://www.linkedin.com/in/" target="_blank" rel="noopener">Connect on LinkedIn ↗</a>
+        </div>
       </div>
-      <div class="fact">
-        <div class="fact-icon fi-grn">↔</div>
-        <div class="fact-text"><strong>MWPM decoding</strong> — the algorithm that reads syndrome measurements and infers corrections in microseconds on real hardware.</div>
-      </div>
-      <div class="fact">
-        <div class="fact-icon fi-amb">⏱</div>
-        <div class="fact-text"><strong>Spacetime decoding</strong> — the 3D framework that lets decoders distinguish data errors from measurement faults across rounds.</div>
-      </div>
-      <div class="fact">
-        <div class="fact-icon fi-teal">⧓</div>
-        <div class="fact-text"><strong>Lattice surgery</strong> — merging and splitting code patches to run logical gates, the route to two-qubit operations on real hardware.</div>
+
+      <div class="concept-list">
+        <div class="concept glass reveal">
+          <div class="glyph">⬡</div>
+          <div><b>Surface codes</b><br><span>The leading architecture for fault-tolerant quantum computing, used by Google, IBM, and Microsoft.</span></div>
+        </div>
+        <div class="concept glass reveal">
+          <div class="glyph">↔</div>
+          <div><b>MWPM decoding</b><br><span>The algorithm that reads syndrome measurements and infers corrections in microseconds on real hardware.</span></div>
+        </div>
+        <div class="concept glass reveal">
+          <div class="glyph">⏱</div>
+          <div><b>Spacetime decoding</b><br><span>The 3D framework that lets decoders distinguish data errors from measurement faults across rounds.</span></div>
+        </div>
+        <div class="concept glass reveal">
+          <div class="glyph">⧓</div>
+          <div><b>Lattice surgery</b><br><span>Merging and splitting code patches to run logical gates, the route to two-qubit operations on real hardware.</span></div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
-  <div class="footer-left">
-    © 2026 Niharika Verma · All rights reserved<br/>
-    Built for the quantum computing community · Free to use and share
-  </div>
-  <div class="footer-links">
-    <a href="https://3dspacetimedecoding.netlify.app" target="_blank">3D Spacetime ↗</a>
-    <a href="https://mwpmdecoder.netlify.app" target="_blank">MWPM ↗</a>
-    <a href="https://concatenatedcode.netlify.app" target="_blank">Concat ↗</a>
-    <a href="https://latticesurgery.netlify.app" target="_blank">Lattice ↗</a>
+  <div class="container">
+    <div class="footer-rule"></div>
+    <div class="footer-links">
+      <a href="./tools/spacetime.html">3D Spacetime ↗</a>
+      <a href="./tools/mwpm.html">MWPM ↗</a>
+      <a href="./tools/concat.html">Concat ↗</a>
+      <a href="./tools/lattice-surgery.html">Lattice ↗</a>
+      <a href="./tools/stabilizers.html">Stabilizers ↗</a>
+      <a href="./tools/logical-gates.html">Logical Gates ↗</a>
+    </div>
+    <div>© 2026 Niharika Verma · All rights reserved</div>
+    <div style="margin-top:4px;">Built for the quantum computing community · Free to use and share</div>
   </div>
 </footer>
 
-<!-- PREVIEW CANVASES: animated mini-previews -->
+</div>
+
 <script>
-// Tool 1 Preview: animated 3D-ish spacetime dots
+/* ---------- animated surface-code lattice background ---------- */
 (function(){
-  const c=document.getElementById('prev1');
-  const ctx=c.getContext('2d');
-  let w,h,t=0;
-  function resize(){w=c.width=c.offsetWidth;h=c.height=c.offsetHeight}
-  resize();
-  const nodes=[];
-  for(let ti=0;ti<5;ti++) for(let xi=0;xi<4;xi++) for(let yi=0;yi<4;yi++){
-    nodes.push({xi,yi,ti,def:Math.random()<0.12});
+  const canvas = document.getElementById('lattice');
+  const ctx = canvas.getContext('2d');
+  let W, H, DPR = Math.min(window.devicePixelRatio||1, 2);
+  let nodes = [];
+  let mouse = {x:-9999, y:-9999};
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function resize(){
+    W = canvas.width = innerWidth * DPR;
+    H = canvas.height = innerHeight * DPR;
+    canvas.style.width = innerWidth+'px';
+    canvas.style.height = innerHeight+'px';
+    buildLattice();
   }
-  const defects=nodes.filter(n=>n.def);
-  function project(xi,yi,ti){
-    const ISO=0.45;
-    const cx=w/2-30, cy=h/2+20;
-    const sx=26,sy=22,st=28;
-    const x=cx+(xi-yi)*sx*0.9 + (ti-2)*14;
-    const y=cy+(xi+yi)*sy*0.4 - ti*st*0.55;
-    return{x,y};
-  }
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    // Layer planes
-    for(let ti=0;ti<5;ti++){
-      for(let xi=0;xi<3;xi++) for(let yi=0;yi<4;yi++){
-        const {x:x1,y:y1}=project(xi,yi,ti);
-        const {x:x2,y:y2}=project(xi+1,yi,ti);
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-        ctx.strokeStyle='rgba(79,142,247,0.09)';ctx.lineWidth=.8;ctx.stroke();
-      }
-      for(let xi=0;xi<4;xi++) for(let yi=0;yi<3;yi++){
-        const {x:x1,y:y1}=project(xi,yi,ti);
-        const {x:x2,y:y2}=project(xi,yi+1,ti);
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-        ctx.strokeStyle='rgba(79,142,247,0.09)';ctx.lineWidth=.8;ctx.stroke();
+
+  function buildLattice(){
+    nodes = [];
+    const spacing = 92 * DPR;
+    const cols = Math.ceil(W/spacing)+2;
+    const rows = Math.ceil(H/spacing)+2;
+    for(let i=0;i<cols;i++){
+      for(let j=0;j<rows;j++){
+        nodes.push({
+          x: i*spacing + (j%2? spacing/2:0),
+          y: j*spacing*0.87,
+          baseX: i*spacing + (j%2? spacing/2:0),
+          baseY: j*spacing*0.87,
+          phase: Math.random()*Math.PI*2,
+          isSyndrome: Math.random() < 0.06,
+          flash: Math.random()*8,
+          role: (i+j)%2===0 ? 'data':'anc'
+        });
       }
     }
-    // Worldlines
-    for(const d of defects){
-      if(d.ti<4){
-        const {x:x1,y:y1}=project(d.xi,d.yi,d.ti);
-        const {x:x2,y:y2}=project(d.xi,d.yi,d.ti+1);
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-        ctx.strokeStyle='rgba(247,97,79,0.5)';ctx.lineWidth=1.2;ctx.stroke();
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const linkDist = 100*DPR;
+
+    // connections
+    ctx.lineWidth = 1*DPR;
+    for(let i=0;i<nodes.length;i++){
+      const n = nodes[i];
+      for(let k=i+1;k<nodes.length;k++){
+        const m = nodes[k];
+        const dx = n.x-m.x, dy = n.y-m.y;
+        const d = Math.sqrt(dx*dx+dy*dy);
+        if(d < linkDist){
+          const alpha = (1-d/linkDist) * 0.10;
+          ctx.strokeStyle = `rgba(160,175,210,${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(n.x,n.y);
+          ctx.lineTo(m.x,m.y);
+          ctx.stroke();
+        }
       }
     }
-    // Nodes
+
+    // nodes
     for(const n of nodes){
-      const {x,y}=project(n.xi,n.yi,n.ti);
-      const pulse=n.def?0.7+0.3*Math.sin(t*.05+n.xi+n.yi+n.ti):1;
-      ctx.beginPath();ctx.arc(x,y,n.def?4.5:2.2,0,Math.PI*2);
-      ctx.fillStyle=n.def?`rgba(247,193,79,${pulse})`:'rgba(20,30,60,0.9)';
-      ctx.fill();
-      if(n.def){
-        ctx.beginPath();ctx.arc(x,y,6.5,0,Math.PI*2);
-        ctx.fillStyle=`rgba(247,193,79,${0.08*pulse})`;ctx.fill();
-      }
-    }
-    t++;requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize',resize);
-  draw();
-})();
+      const drift = reduced?0: Math.sin(t*0.00035 + n.phase)*4*DPR;
+      const driftY = reduced?0: Math.cos(t*0.0003 + n.phase)*4*DPR;
+      n.x = n.baseX + drift;
+      n.y = n.baseY + driftY;
 
-// Tool 2 Preview: animated MWPM graph
-(function(){
-  const c=document.getElementById('prev2');
-  const ctx=c.getContext('2d');
-  let w,h,t=0;
-  function resize(){w=c.width=c.offsetWidth;h=c.height=c.offsetHeight}
-  resize();
-  const DEFS=[
-    {label:'D0',color:'#f7c14f'},{label:'D1',color:'#f7c14f'},
-    {label:'D2',color:'#f7c14f'},{label:'D3',color:'#f7c14f'},
-  ];
-  function getPos(i){
-    const R=Math.min(w,h)*0.3;
-    const cx=w/2,cy=h/2;
-    return{x:cx+R*Math.cos(2*Math.PI*i/4-Math.PI/4),y:cy+R*Math.sin(2*Math.PI*i/4-Math.PI/4)};
-  }
-  const PAIRS=[[0,3],[1,2]];
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    // All edges
-    for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){
-      const {x:x1,y:y1}=getPos(i),{x:x2,y:y2}=getPos(j);
-      const isMatch=PAIRS.some(([a,b])=>(a===i&&b===j)||(a===j&&b===i));
-      const prog=Math.min(1,(t%120)/60);
-      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-      if(isMatch){
-        ctx.strokeStyle=`rgba(61,214,140,${0.3+0.5*prog})`;
-        ctx.lineWidth=2;ctx.setLineDash([]);
-      } else {
-        ctx.strokeStyle='rgba(79,142,247,0.13)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
-      }
-      ctx.stroke();ctx.setLineDash([]);
-      // weight
-      const mx=(x1+x2)/2,my=(y1+y2)/2;
-      const d=isMatch?2:Math.floor(Math.random()*3)+2;
-      ctx.font='9px JetBrains Mono';
-      ctx.fillStyle=isMatch?'rgba(61,214,140,0.7)':'rgba(60,70,100,0.6)';
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(isMatch?'2':String(d),mx,my);
-    }
-    // Nodes
-    for(let i=0;i<4;i++){
-      const {x,y}=getPos(i);
-      const pulse=0.85+0.15*Math.sin(t*.04+i);
-      ctx.beginPath();ctx.arc(x,y,14,0,Math.PI*2);
-      ctx.fillStyle=`rgba(247,193,79,${0.1*pulse})`;ctx.fill();
-      ctx.beginPath();ctx.arc(x,y,11,0,Math.PI*2);
-      ctx.fillStyle=`rgba(247,193,79,${pulse})`;ctx.fill();
-      ctx.font='bold 8px JetBrains Mono';
-      ctx.fillStyle='#0a0c12';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(DEFS[i].label,x,y);
-    }
-    // Label
-    const prog=Math.min(1,(t%120)/60);
-    if(prog>0.3){
-      ctx.font='10px JetBrains Mono';
-      ctx.fillStyle=`rgba(61,214,140,${(prog-.3)/.7*0.8})`;
-      ctx.textAlign='left';ctx.textBaseline='top';
-      ctx.fillText('min weight = 4',10,10);
-    }
-    t++;requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize',resize);
-  draw();
-})();
+      // mouse proximity glow
+      const dmx = n.x/DPR - mouse.x, dmy = n.y/DPR - mouse.y;
+      const distMouse = Math.sqrt(dmx*dmx+dmy*dmy);
+      const near = Math.max(0, 1 - distMouse/220);
 
-// Tool 3 Preview: animated error rate curves
-(function(){
-  const c=document.getElementById('prev3');
-  const ctx=c.getContext('2d');
-  let w,h,t=0;
-  function resize(){w=c.width=c.offsetWidth;h=c.height=c.offsetHeight}
-  resize();
-  const LEVELS=5;
-  const TRACES=[
-    {p:0.05,col:'#3dd68c'},{p:0.15,col:'#3dcfc9'},{p:0.30,col:'#4f8ef7'},
-    {p:0.40,col:'#a47cf7'},{p:0.48,col:'#f7614f'},
-  ];
-  function pL(p,k){let r=p;for(let i=0;i<k;i++) r=3*r*r-2*r*r*r;return r;}
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    const PAD=28,gw=w-PAD*2,gh=h-PAD*2;
-    // Axes
-    ctx.strokeStyle='rgba(79,142,247,0.15)';ctx.lineWidth=.7;
-    for(let i=0;i<=LEVELS;i++){
-      const x=PAD+i*(gw/LEVELS);
-      ctx.beginPath();ctx.moveTo(x,PAD);ctx.lineTo(x,PAD+gh);ctx.stroke();
-    }
-    const logMin=-12,logMax=0;
-    for(let l=logMin;l<=logMax;l+=3){
-      const y=PAD+gh*(1-(l-logMin)/(logMax-logMin));
-      ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(PAD+gw,y);ctx.stroke();
-    }
-    // Traces
-    const prog=Math.min(1,t/80);
-    for(const {p,col} of TRACES){
+      let r = n.role==='anc' ? 2.0*DPR : 1.4*DPR;
+      let color = n.role==='anc' ? '150,190,255' : '210,215,230';
+
+      if(n.isSyndrome){
+        const cycle = (Math.sin(t*0.0016 + n.flash)+1)/2;
+        if(cycle > 0.82){
+          color = '255,168,64';
+          r = 3.2*DPR;
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(255,168,64,${0.35})`;
+          ctx.arc(n.x, n.y, r*4, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+
+      const alpha = 0.28 + near*0.6;
       ctx.beginPath();
-      for(let k=0;k<=LEVELS*prog;k+=0.05){
-        const ki=Math.floor(k);
-        const kf=k-ki;
-        const v0=pL(p,ki),v1=ki<LEVELS?pL(p,ki+1):v0;
-        const v=v0*(1-kf)+v1*kf;
-        const lv=Math.log10(Math.max(v,1e-14));
-        const x=PAD+k*(gw/LEVELS);
-        const y=PAD+gh*(1-(lv-logMin)/(logMax-logMin));
-        k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-      }
-      ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.stroke();
+      ctx.fillStyle = `rgba(${color},${alpha})`;
+      ctx.arc(n.x, n.y, r + near*2*DPR, 0, Math.PI*2);
+      ctx.fill();
     }
-    // Threshold line
-    const thX=PAD+gw*0.5;
-    ctx.beginPath();ctx.moveTo(thX,PAD);ctx.lineTo(thX,PAD+gh);
-    ctx.strokeStyle='rgba(247,193,79,0.25)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
-    ctx.font='9px JetBrains Mono';ctx.fillStyle='rgba(247,193,79,0.5)';
-    ctx.textAlign='center';ctx.fillText('p_th',thX,PAD-6);
-    // Axis labels
-    ctx.fillStyle='rgba(62,69,96,0.8)';ctx.font='8px JetBrains Mono';
-    ctx.textAlign='center';
-    for(let k=0;k<=LEVELS;k++) ctx.fillText('L'+k,PAD+k*(gw/LEVELS),PAD+gh+12);
-    t++;requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize',resize);
-  draw();
-})();
 
-// Tool 4 Preview: two patches merge & split (lattice surgery)
-(function(){
-  const c=document.getElementById('prev4');
-  if(!c) return;
-  const ctx=c.getContext('2d');
-  let w,h,t=0;
-  function resize(){w=c.width=c.offsetWidth;h=c.height=c.offsetHeight}
+    if(!reduced) requestAnimationFrame(draw);
+  }
+
+  addEventListener('resize', resize, {passive:true});
+  addEventListener('mousemove', e=>{ mouse.x = e.clientX; mouse.y = e.clientY; }, {passive:true});
+  addEventListener('mouseleave', ()=>{ mouse.x=-9999; mouse.y=-9999; });
+
   resize();
-  const N=3, cell=18;
-  function patch(ox,oy){
-    // boundary edges: top/bottom X (blue), left/right Z (amber)
-    ctx.lineWidth=1.2;
-    ctx.strokeStyle='rgba(79,142,247,.32)';
-    ctx.beginPath();
-    ctx.moveTo(ox,oy);ctx.lineTo(ox+(N-1)*cell,oy);
-    ctx.moveTo(ox,oy+(N-1)*cell);ctx.lineTo(ox+(N-1)*cell,oy+(N-1)*cell);
-    ctx.stroke();
-    ctx.strokeStyle='rgba(247,193,79,.32)';
-    ctx.beginPath();
-    ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+(N-1)*cell);
-    ctx.moveTo(ox+(N-1)*cell,oy);ctx.lineTo(ox+(N-1)*cell,oy+(N-1)*cell);
-    ctx.stroke();
-    // data qubits
-    for(let j=0;j<N;j++)for(let i=0;i<N;i++){
-      ctx.beginPath();ctx.arc(ox+i*cell,oy+j*cell,2.4,0,Math.PI*2);
-      ctx.fillStyle='rgba(174,184,212,.9)';ctx.fill();
-    }
-  }
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    const span=(N-1)*cell, gap=cell*1.7;
-    const totalW=span*2+gap;
-    const ox1=(w-totalW)/2, ox2=ox1+span+gap, oy=(h-span)/2;
-    const cyc=(t%280)/280;
-    let a=0;
-    if(cyc>0.28 && cyc<0.72){
-      const into=Math.min(1,(cyc-0.28)/0.12), out=Math.min(1,(0.72-cyc)/0.12);
-      a=Math.max(0,Math.min(into,out));
-    }
-    patch(ox1,oy);patch(ox2,oy);
-    if(a>0.01){
-      const xR=ox1+span, xL=ox2;
-      // Z-type seam tiles (amber) bridging the two patches
-      for(let j=0;j<N-1;j++){
-        ctx.beginPath();
-        ctx.moveTo(xR,oy+j*cell);ctx.lineTo(xL,oy+j*cell);
-        ctx.lineTo(xL,oy+(j+1)*cell);ctx.lineTo(xR,oy+(j+1)*cell);ctx.closePath();
-        ctx.fillStyle=`rgba(247,193,79,${0.22*a})`;ctx.fill();
-        ctx.strokeStyle=`rgba(247,193,79,${0.7*a})`;ctx.lineWidth=1;ctx.stroke();
-      }
-      // joint logical Z line through the merged patch
-      const my=oy+((N-1)/2)*cell;
-      ctx.beginPath();ctx.moveTo(ox1,my);ctx.lineTo(ox2+span,my);
-      ctx.strokeStyle=`rgba(247,193,79,${0.85*a})`;ctx.lineWidth=1.8;ctx.stroke();
-      // label
-      ctx.font='9px JetBrains Mono';ctx.fillStyle=`rgba(247,193,79,${0.9*a})`;
-      ctx.textAlign='center';ctx.textBaseline='alphabetic';
-      ctx.fillText('M_ZZ',(ox1+ox2+span)/2,oy-9);
-    }
-    t++;requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize',resize);
-  draw();
+  requestAnimationFrame(draw);
+  if(reduced) draw(0);
 })();
-</script>
 
+/* ---------- basics tabs ---------- */
+(function(){
+  const btns = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  btns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      btns.forEach(b=>b.classList.remove('active'));
+      panels.forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+      if(btn.dataset.tab === 'surfacecode') startMiniLattice();
+    });
+  });
+})();
+
+/* ---------- mini surface-code lattice (Basics tab 05) ---------- */
+let miniLatticeStarted = false;
+function startMiniLattice(){
+  if(miniLatticeStarted) return;
+  miniLatticeStarted = true;
+  const canvas = document.getElementById('miniLattice');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let DPR = Math.min(window.devicePixelRatio||1, 2);
+  let W,H,nodes=[];
+
+  function size(){
+    const r = canvas.getBoundingClientRect();
+    canvas.width = r.width*DPR; canvas.height = r.height*DPR;
+    W = canvas.width; H = canvas.height;
+    build();
+  }
+  function build(){
+    nodes = [];
+    const cols=6, rows=6, sp = W/cols;
+    for(let i=0;i<cols;i++){
+      for(let j=0;j<rows;j++){
+        nodes.push({
+          x: i*sp + sp/2, y: j*(H/rows) + H/rows/2,
+          isAnc: (i+j)%2===0,
+          phase: Math.random()*Math.PI*2
+        });
+      }
+    }
+  }
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const sp = W/6;
+    ctx.strokeStyle = 'rgba(160,175,210,.14)';
+    ctx.lineWidth = 1*DPR;
+    for(const n of nodes){
+      ctx.beginPath();
+      ctx.moveTo(n.x-sp/2, n.y); ctx.lineTo(n.x+sp/2, n.y);
+      ctx.moveTo(n.x, n.y-sp/2); ctx.lineTo(n.x, n.y+sp/2);
+      ctx.stroke();
+    }
+    for(const n of nodes){
+      if(n.isAnc){
+        const cycle = (Math.sin(t*0.0018 + n.phase)+1)/2;
+        const fire = cycle > 0.8;
+        ctx.beginPath();
+        ctx.strokeStyle = fire? 'rgba(255,166,64,.9)' : 'rgba(150,190,255,.4)';
+        ctx.lineWidth = 1.4*DPR;
+        ctx.arc(n.x,n.y, 6*DPR, 0, Math.PI*2);
+        ctx.stroke();
+        if(fire){
+          ctx.beginPath();
+          ctx.fillStyle = 'rgba(255,166,64,.25)';
+          ctx.arc(n.x,n.y, 16*DPR, 0, Math.PI*2);
+          ctx.fill();
+        }
+      } else {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(230,232,240,.5)';
+        ctx.arc(n.x,n.y, 3.2*DPR, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    if(!reduced) requestAnimationFrame(draw);
+  }
+  size();
+  addEventListener('resize', size, {passive:true});
+  requestAnimationFrame(draw);
+  if(reduced) draw(0);
+}
+
+/* ---------- nav condense on scroll ---------- */
+const nav = document.getElementById('nav');
+addEventListener('scroll', ()=>{
+  nav.classList.toggle('scrolled', scrollY > 40);
+}, {passive:true});
+
+/* ---------- scroll reveal ---------- */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting){
+      en.target.classList.add('in');
+      io.unobserve(en.target);
+    }
+  });
+}, {threshold:0.16, rootMargin:'0px 0px -60px 0px'});
+document.querySelectorAll('.reveal').forEach((el,i)=>{
+  el.style.transitionDelay = (Math.min(i%6,6)*70)+'ms';
+  io.observe(el);
+});
+
+/* ---------- cursor-reactive glass tilt + liquid distortion ---------- */
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!reducedMotion){
+  document.querySelectorAll('.tilt').forEach(card=>{
+    let raf=null;
+    card.addEventListener('mousemove', e=>{
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left)/r.width - 0.5;
+      const py = (e.clientY - r.top)/r.height - 0.5;
+      if(raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(()=>{
+        card.style.transform = `perspective(900px) rotateX(${(-py*7).toFixed(2)}deg) rotateY(${(px*9).toFixed(2)}deg) translateY(-4px)`;
+        card.style.setProperty('--gx', (px*50+50)+'%');
+        card.style.setProperty('--gy', (py*50+50)+'%');
+      });
+    });
+    card.addEventListener('mouseleave', ()=>{
+      card.style.transform = '';
+    });
+  });
+}
+
+/* ---------- SVG liquid displacement pulse on card hover ---------- */
+const turb = document.getElementById('turb');
+document.querySelectorAll('.tool-card').forEach(card=>{
+  card.addEventListener('mouseenter', ()=>{
+    if(reducedMotion) return;
+    let scale = 0;
+    const dispEl = document.querySelector('#liquid-distort feDisplacementMap');
+    let frame;
+    function grow(){
+      scale += 2.2;
+      dispEl.setAttribute('scale', Math.min(scale, 18));
+      if(scale < 18) frame = requestAnimationFrame(grow);
+    }
+    grow();
+    card._shrink = ()=>{
+      cancelAnimationFrame(frame);
+      let s = parseFloat(dispEl.getAttribute('scale'))||0;
+      (function shrink(){
+        s -= 2.4;
+        dispEl.setAttribute('scale', Math.max(s,0));
+        if(s>0) requestAnimationFrame(shrink);
+      })();
+    };
+  });
+  card.addEventListener('mouseleave', ()=>{ card._shrink && card._shrink(); });
+});
+</script>
 </body>
 </html>
