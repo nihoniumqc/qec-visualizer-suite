@@ -1,6 +1,6 @@
 # Quantum Error Correction — Interactive Visualizer Suite
 
-**Live site:** https://niharikaverma.netlify.app *(update with your actual landing page URL)*
+**Live site:** https://niharikaverma.netlify.app 
 
 Four free, interactive tools that make the core mechanics of quantum error correction (QEC) visible and explorable in the browser. No install, no login, no backend — every tool is a single self-contained HTML file using Canvas/SVG/Three.js for rendering.
 
